@@ -1,0 +1,6 @@
+interface:
+  display_name: "No Slop"
+  short_description: "Strict anti-slop UI judge and fixer"
+  default_prompt: "Use $no-slop --scan to audit this UI and block generic AI-slop."
+policy:
+  allow_implicit_invocation: true

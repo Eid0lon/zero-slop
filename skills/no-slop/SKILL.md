@@ -106,4 +106,4 @@ python no-slop/scripts/no_slop_cli.py --prevent "brief text" --autopsy
 python no-slop/scripts/no_slop_cli.py --preset dashboard --dial STRICTNESS=10 --scan <target>
 ```
 
-The CLI supports scoring, dials, presets, signatures, economy mode, autopsy reporting, and a deterministic judge-gate summary. The Codex skill workflow remains the authority for actual code edits and live subagent judging.
+The CLI supports context-calibrated scoring, dials, presets, signatures, economy mode, autopsy reporting, and a deterministic judge-gate summary. It treats regex matches as candidate evidence, then adjusts by confidence, counter-evidence, and nearby UI context. The Codex skill workflow remains the authority for actual code edits and live subagent judging.

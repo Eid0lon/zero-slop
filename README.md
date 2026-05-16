@@ -46,9 +46,9 @@ AI coding agents tend to output the same visual cliches -- purple gradients, gla
 
 ### `no-slop` -- detect and fix generic UI
 
-- Scans `.tsx`, `.jsx`, `.vue`, `.svelte`, `.css`, `.html` files for 15 categories of generic patterns
+- Scans `.tsx`, `.jsx`, `.vue`, `.svelte`, `.css`, `.html` files with a context-calibrated evidence engine, not raw regex scoring
 - Assigns a 0--100 slop score and names which "slop signatures" matched
-- Emits an AI UI Autopsy: cause of death, fingerprints, suspicious lines, any-product test, and fix order
+- Emits an AI UI Autopsy: cause of death, fingerprints, suspicious lines, confidence, counter-evidence, any-product test, and fix order
 - Runs a 6-role review protocol to decide if the UI passes
 - Can do surgical fixes (`--fix`) or full rewrites (`--redesign`)
 - Also works on briefs before code is generated (`--prevent`)

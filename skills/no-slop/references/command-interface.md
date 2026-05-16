@@ -55,10 +55,13 @@ Do not silently enable economy mode.
 
 `--autopsy` is a report format for the deterministic scanner. It does not edit files.
 
+Autopsy findings are context-calibrated: raw pattern hits become candidate evidence, then the helper downgrades or ignores them when nearby code proves legitimate usage, such as semantic CSS variables, accessible hover affordances, input placeholders, or display-heading typography.
+
 It turns scan findings into a forensic narrative:
 
 - cause of death
 - AI fingerprints
+- confidence and counter-evidence
 - any-product test
 - suspicious lines
 - what the UI pretends versus what it proves

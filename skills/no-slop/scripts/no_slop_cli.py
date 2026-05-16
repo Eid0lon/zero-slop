@@ -180,6 +180,13 @@ class Finding:
     points: int
     reason: str
     excerpt: str
+    match: str = ""
+    confidence: str = "medium"
+    effective_points: int | None = None
+    action: str = "counted"
+    context: str = ""
+    counter_evidence: Sequence[str] = ()
+    amplifiers: Sequence[str] = ()
 
 
 PATTERNS: Sequence[Pattern] = (
@@ -190,18 +197,33 @@ PATTERNS: Sequence[Pattern] = (
     Pattern("Layout Formulae", "Medium", 4, re.compile(r"grid-cols-3|grid-cols-4|md:grid-cols-3|lg:grid-cols-3|py-24|py-32|text-center", re.I), "formulaic grid/spacing/alignment"),
     Pattern("Component Soup", "Medium", 4, re.compile(r"rounded-2xl|rounded-3xl|hover:scale|hover:-translate-y|hover:shadow", re.I), "over-rounded or hover-lift component cliche"),
     Pattern("Component Soup", "Low", 2, re.compile(r"Sparkles|Zap|Shield|Rocket|Star|Award|CheckCircle|TrendingUp"), "generic decorative icon choice"),
-    Pattern("Typography Sameness", "Medium", 4, re.compile(r"Inter|Geist|Roboto|Plus Jakarta|Space Grotesk|tracking-tight|tracking-\[-", re.I), "default generated typography signal"),
+    Pattern("Typography Sameness", "Medium", 4, re.compile(r"\b(?:Inter|Geist|Roboto|Plus Jakarta|Space Grotesk)\b|tracking-tight|tracking-\[-", re.I), "default generated typography signal"),
     Pattern("Typography Sameness", "Low", 2, re.compile(r"uppercase.*tracking-wider|text-xs.*uppercase|text-gray-400|text-slate-400", re.I), "weak label/body hierarchy"),
     Pattern("Motion Spam", "Medium", 4, re.compile(r"fadeIn|fade-in|opacity-0|whileInView|animate-.*fade|animate-.*bounce|animate-.*pulse|transition-all", re.I), "decorative or global motion"),
     Pattern("Copy Void", "Medium", 4, re.compile(r"unlock|empower|streamline|revolutionize|seamless|powerful|innovative|next-generation|all-in-one|supercharge", re.I), "generic marketing copy"),
-    Pattern("Copy Void", "High", 8, re.compile(r"lorem|ipsum|placeholder|dummy|trusted by|10k\+|99\.9%", re.I), "placeholder or fake proof risk"),
+    Pattern("Copy Void", "High", 8, re.compile(r"lorem|ipsum|\bplaceholder\b|\bdummy\b|trusted by|10k\+|99\.9%", re.I), "placeholder or fake proof risk"),
     Pattern("Accessibility Slop", "Critical", 15, re.compile(r"outline-none|focus:outline-none|focus:ring-0", re.I), "focus visibility risk"),
-    Pattern("Responsive and Performance Slop", "Medium", 4, re.compile(r"min-h-screen|h-screen|w-screen|overflow-hidden|blur-|backdrop-blur|filter|drop-shadow", re.I), "viewport trap or heavy visual effect risk"),
+    Pattern("Responsive and Performance Slop", "Medium", 4, re.compile(r"min-h-screen|h-screen|w-screen|overflow-hidden|blur-|backdrop-blur|\bfilter\b|drop-shadow", re.I), "viewport trap or heavy visual effect risk"),
     Pattern("Code and Design-System Smells", "Medium", 4, re.compile(r"className=\"[^\"]*(\s+[^\s\"]+){15,}"), "long utility-class soup"),
     Pattern("Design Token Violation", "High", 8, re.compile(r"bg-\[#|text-\[#|border-\[#|shadow-\[|rounded-\[|#[0-9a-fA-F]{3,8}"), "raw visual values bypass tokens"),
     Pattern("Hierarchy Collapse", "High", 8, re.compile(r"text-lg font-semibold|font-semibold text-lg|grid-cols-3.*gap|grid.*gap-8", re.I), "repeated equal-weight hierarchy"),
     Pattern("Brand Incoherence", "Medium", 4, re.compile(r"modern|sleek|premium|beautiful|make it pop", re.I), "brand direction replaced by vague style words"),
 )
+
+CATEGORY_SCORE_CAPS: Dict[str, int] = {
+    "Accessibility Slop": 30,
+    "Aesthetic Defaults": 24,
+    "Brand Incoherence": 18,
+    "Code and Design-System Smells": 18,
+    "Component Soup": 20,
+    "Copy Void": 24,
+    "Design Token Violation": 24,
+    "Hierarchy Collapse": 22,
+    "Layout Formulae": 24,
+    "Motion Spam": 18,
+    "Responsive and Performance Slop": 18,
+    "Typography Sameness": 14,
+}
 
 JUDGE_ROLES = (
     "Visual Forensics Judge",
@@ -215,6 +237,331 @@ JUDGE_ROLES = (
 
 def clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
+
+
+def finding_points(finding: Finding) -> int:
+    if finding.effective_points is None:
+        return finding.points
+    return finding.effective_points
+
+
+def severity_for_points(points: int, fallback: str) -> str:
+    if points >= 12:
+        return "Critical"
+    if points >= 7:
+        return "High"
+    if points >= 3:
+        return "Medium"
+    if points > 0:
+        return "Low"
+    return fallback
+
+
+def nearby_text(lines: Sequence[str], zero_based_line: int, radius: int = 3) -> str:
+    start = max(0, zero_based_line - radius)
+    end = min(len(lines), zero_based_line + radius + 1)
+    return "\n".join(lines[start:end])
+
+
+def has_accessibility_evidence(text: str) -> bool:
+    return bool(re.search(r"focus-visible|focus:ring(?!-0)|aria-|sr-only|role=|tabIndex|keyboard|<label\b|htmlFor=", text, re.I))
+
+
+def has_focus_replacement(text: str) -> bool:
+    return bool(re.search(r"focus-visible|focus:ring(?!-0)|focus-visible:ring|data-\[focus", text, re.I))
+
+
+def has_design_token_evidence(text: str) -> bool:
+    return bool(
+        re.search(
+            r"var\(--|theme\(|token|semantic|--(?:surface|background|foreground|accent|primary|secondary|muted|border|ring|radius|shadow|space|text|card|panel)",
+            text,
+            re.I,
+        )
+    )
+
+
+def has_product_specific_evidence(text: str) -> bool:
+    return bool(
+        re.search(
+            r"\b(invoice|expense|transaction|ledger|patient|order|ticket|project|repository|deployment|customer|account|calendar|schedule|message|settings|workflow|chart|table|row|record|dataset|queue|incident|policy|claim|shipment|booking)\b",
+            text,
+            re.I,
+        )
+    )
+
+
+def has_fake_proof(text: str) -> bool:
+    return bool(re.search(r"lorem|ipsum|\bdummy\b|trusted by|10k\+|99\.9%|fake (?:metric|stat|data|claim)|placeholder (?:handler|data|copy|content)", text, re.I))
+
+
+def is_heading_context(text: str) -> bool:
+    return bool(re.search(r"<h[1-3]\b|\bh[1-3]\b|heading|headline|display title", text, re.I))
+
+
+def is_interactive_context(text: str) -> bool:
+    return bool(re.search(r"<(?:button|a|input|select|textarea)\b|href=|onClick=|role=[\"']button|primary button|cta|submit|action", text, re.I))
+
+
+def is_placeholder_attribute(text: str) -> bool:
+    return bool(re.search(r"\bplaceholder\s*=", text, re.I))
+
+
+def is_css_filter_context(text: str) -> bool:
+    return bool(re.search(r"filter\s*:|filter\(|backdrop-filter|class(?:Name)?=[^>\n]*\bfilter\b", text, re.I))
+
+
+def has_visual_cliche_cluster(text: str) -> bool:
+    hits = 0
+    for pattern in (
+        r"from-blue|to-purple|from-indigo|to-pink|bg-clip-text|text-transparent",
+        r"backdrop-blur|bg-white/10|border-white/20|shadow-2xl|shadow-xl|blur-3xl",
+        r"rounded-2xl|rounded-3xl",
+        r"Features|Testimonials|Pricing",
+        r"unlock|empower|seamless|powerful|innovative|next-generation",
+    ):
+        if re.search(pattern, text, re.I):
+            hits += 1
+    return hits >= 3
+
+
+def calibrated_finding(
+    finding: Finding,
+    points: int,
+    confidence: str,
+    action: str,
+    context: str,
+    counter_evidence: Sequence[str],
+    amplifiers: Sequence[str],
+) -> Finding:
+    return Finding(
+        file=finding.file,
+        line=finding.line,
+        category=finding.category,
+        severity=severity_for_points(points, finding.severity),
+        points=finding.points,
+        reason=finding.reason,
+        excerpt=finding.excerpt,
+        match=finding.match,
+        confidence=confidence,
+        effective_points=points,
+        action=action,
+        context=context,
+        counter_evidence=tuple(counter_evidence),
+        amplifiers=tuple(amplifiers),
+    )
+
+
+def calibrate_finding(
+    finding: Finding,
+    lines: Sequence[str],
+    reason_counts: Dict[tuple[str, str], int],
+    category_counts: Dict[str, int],
+) -> Finding:
+    line_index = max(0, finding.line - 1)
+    line = lines[line_index].strip() if line_index < len(lines) else finding.excerpt
+    context_text = nearby_text(lines, line_index)
+    combined = f"{line}\n{context_text}"
+    match = finding.match.lower()
+    points = finding.points
+    confidence = "medium"
+    action = "counted"
+    context = "raw deterministic signal"
+    counters: List[str] = []
+    amplifiers: List[str] = []
+    reason_repeat = reason_counts.get((finding.category, finding.reason), 0)
+    category_repeat = category_counts.get(finding.category, 0)
+
+    if reason_repeat >= 4:
+        amplifiers.append("repeated same-pattern cluster")
+    if has_visual_cliche_cluster(combined):
+        amplifiers.append("nearby cliche cluster")
+
+    if finding.category == "Typography Sameness":
+        if "tracking-tight" in match and is_heading_context(combined):
+            counters.append("tracking-tight is attached to display/heading context")
+            points = 0 if reason_repeat <= 2 else 1
+            confidence = "low"
+            context = "display typography, not automatically slop"
+        elif match in {"inter", "geist", "roboto", "plus jakarta", "space grotesk"} and not re.search(r"font|next/font|font-family|class(?:Name)?=", combined, re.I):
+            counters.append("font token appears as prose, not UI styling")
+            points = 0
+            confidence = "low"
+            context = "prose mention"
+        elif reason_repeat <= 1:
+            counters.append("single typography default signal")
+            points = min(points, 1)
+            confidence = "low"
+            context = "weak typography evidence"
+
+    elif finding.category == "Component Soup":
+        if re.search(r"hover:scale|hover:-translate-y|hover:shadow", line, re.I):
+            if is_interactive_context(combined) and has_accessibility_evidence(combined):
+                counters.append("hover affordance has interactive and focus/accessibility context")
+                points = 0
+                confidence = "low"
+                context = "legitimate interactive affordance"
+            elif is_interactive_context(combined) and reason_repeat <= 2:
+                counters.append("single interactive hover affordance")
+                points = 1
+                confidence = "low"
+                context = "weak component-cliche evidence"
+        elif re.search(r"rounded-2xl|rounded-3xl", line, re.I) and reason_repeat <= 2 and not has_visual_cliche_cluster(combined):
+            counters.append("large radius is isolated")
+            points = 1
+            confidence = "low"
+            context = "isolated shape token"
+        elif finding.severity == "Low" and reason_repeat <= 1:
+            counters.append("single decorative icon signal")
+            points = 0
+            confidence = "low"
+            context = "isolated icon choice"
+
+    elif finding.category == "Responsive and Performance Slop":
+        if match == "filter" and not is_css_filter_context(line):
+            counters.append("filter appears to be product/control copy, not CSS filter")
+            points = 0
+            confidence = "low"
+            context = "filter control wording"
+        elif match == "min-h-screen" and not re.search(r"(?<!min-)h-screen|\bw-screen\b|overflow-hidden", combined, re.I):
+            counters.append("min-h-screen without a viewport trap cluster")
+            points = 1
+            confidence = "low"
+            context = "weak viewport-risk evidence"
+        elif "backdrop-blur" in match and category_repeat <= 2 and not has_visual_cliche_cluster(combined):
+            counters.append("single backdrop blur signal")
+            points = 2
+            confidence = "low"
+            context = "isolated performance-risk evidence"
+
+    elif finding.category == "Copy Void":
+        if "placeholder" in match and is_placeholder_attribute(line) and not has_fake_proof(combined):
+            counters.append("placeholder is an input affordance, not fake content")
+            points = 0
+            confidence = "low"
+            context = "legitimate form placeholder"
+        elif not has_fake_proof(combined) and has_product_specific_evidence(combined) and reason_repeat <= 1:
+            counters.append("generic word is surrounded by product-specific nouns")
+            points = 1
+            confidence = "low"
+            context = "weak copy residue"
+        elif has_fake_proof(combined):
+            confidence = "high"
+            context = "unsupported proof/filler evidence"
+
+    elif finding.category == "Layout Formulae":
+        if re.search(r"text-center|py-24|py-32|grid-cols-[34]|md:grid-cols-3|lg:grid-cols-3", match, re.I) and has_product_specific_evidence(combined) and not has_visual_cliche_cluster(combined):
+            counters.append("layout utility appears inside product-specific UI")
+            points = 1
+            confidence = "low"
+            context = "weak layout-formula evidence"
+        elif re.search(r"Features|Testimonials|Pricing|Get Started|Start Free|Book a demo", match, re.I) and reason_repeat <= 1 and has_product_specific_evidence(combined):
+            counters.append("generic section/CTA label has product-specific surrounding context")
+            points = 2
+            confidence = "low"
+            context = "isolated landing-page formula"
+
+    elif finding.category == "Aesthetic Defaults":
+        if has_design_token_evidence(combined):
+            counters.append("visual value is routed through semantic token context")
+            points = 1
+            confidence = "low"
+            context = "token-backed visual styling"
+        elif finding.reason == "decorative glass/glow styling" and reason_repeat <= 1 and not has_visual_cliche_cluster(combined):
+            counters.append("single decorative effect signal")
+            points = 2
+            confidence = "low"
+            context = "isolated aesthetic evidence"
+
+    elif finding.category == "Design Token Violation":
+        if has_design_token_evidence(combined):
+            counters.append("arbitrary value references a semantic CSS variable or theme token")
+            points = 0
+            confidence = "low"
+            context = "token-backed arbitrary value"
+        elif reason_repeat <= 1:
+            counters.append("single raw visual value")
+            points = 4
+            confidence = "medium"
+            context = "raw token bypass"
+
+    elif finding.category == "Code and Design-System Smells":
+        if has_design_token_evidence(combined) or has_product_specific_evidence(combined):
+            counters.append("long class string has design-system or product context")
+            points = 2
+            confidence = "low"
+            context = "utility density, not automatic soup"
+
+    elif finding.category == "Accessibility Slop":
+        if has_focus_replacement(combined):
+            counters.append("focus removal has a visible replacement nearby")
+            points = 1
+            confidence = "low"
+            context = "focus reset with replacement"
+        else:
+            confidence = "high"
+            context = "focus visibility blocker"
+
+    if amplifiers and points > 0 and confidence == "medium":
+        confidence = "high"
+    if counters and not amplifiers and points > 0 and confidence != "low":
+        confidence = "medium"
+    if points <= 0:
+        action = "ignored"
+        points = 0
+
+    return calibrated_finding(finding, points, confidence, action, context, counters, amplifiers)
+
+
+def calibrate_findings(findings: Sequence[Finding], lines: Sequence[str]) -> List[Finding]:
+    reason_counts: Dict[tuple[str, str], int] = {}
+    category_counts: Dict[str, int] = {}
+    for finding in findings:
+        reason_key = (finding.category, finding.reason)
+        reason_counts[reason_key] = reason_counts.get(reason_key, 0) + 1
+        category_counts[finding.category] = category_counts.get(finding.category, 0) + 1
+
+    calibrated = [calibrate_finding(finding, lines, reason_counts, category_counts) for finding in findings]
+    return [finding for finding in calibrated if finding.action != "ignored" and finding_points(finding) > 0]
+
+
+def aggregate_scan(findings: Sequence[Finding]) -> Dict[str, object]:
+    category_scores_raw: Dict[str, int] = {}
+    category_counts: Dict[str, int] = {}
+    severity_counts: Dict[str, int] = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0}
+
+    for finding in findings:
+        points = finding_points(finding)
+        category_scores_raw[finding.category] = category_scores_raw.get(finding.category, 0) + points
+        category_counts[finding.category] = category_counts.get(finding.category, 0) + 1
+        severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
+
+    category_scores = {
+        category: min(score, CATEGORY_SCORE_CAPS.get(category, 24))
+        for category, score in category_scores_raw.items()
+        if score > 0
+    }
+    signature_findings = [
+        finding
+        for finding in findings
+        if finding.confidence != "low" and finding_points(finding) >= 2
+    ]
+    signature_counts: Dict[str, int] = {}
+    for finding in signature_findings:
+        signature_counts[finding.category] = signature_counts.get(finding.category, 0) + 1
+
+    signatures = detect_signatures(signature_counts, signature_findings)
+    signature_score = sum(sig["points"] for sig in signatures)
+    score = min(100, sum(category_scores.values()) + signature_score)
+
+    return {
+        "findings": list(findings),
+        "score": score,
+        "category_scores": category_scores,
+        "category_counts": category_counts,
+        "severity_counts": severity_counts,
+        "signatures": signatures,
+    }
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
@@ -281,6 +628,8 @@ def iter_scan_files(target: Path) -> Iterable[Path]:
             if name == "SKILL.md":
                 continue
             path = Path(root) / name
+            if path.suffix.lower() == ".md":
+                continue
             if path.suffix.lower() in SCAN_SUFFIXES:
                 yield path
 
@@ -297,13 +646,15 @@ def scan_file(path: Path, root: Path) -> List[Finding]:
     except ValueError:
         display = str(path)
 
+    lines = text.splitlines()
     seen_in_file = set()
-    for line_no, line in enumerate(text.splitlines(), start=1):
+    for line_no, line in enumerate(lines, start=1):
         stripped = line.strip()
         if not stripped:
             continue
         for pattern in PATTERNS:
-            if pattern.regex.search(stripped):
+            match = pattern.regex.search(stripped)
+            if match:
                 key = (pattern.category, pattern.reason, line_no)
                 if key in seen_in_file:
                     continue
@@ -317,9 +668,10 @@ def scan_file(path: Path, root: Path) -> List[Finding]:
                         points=pattern.points,
                         reason=pattern.reason,
                         excerpt=stripped[:180],
+                        match=match.group(0)[:80],
                     )
                 )
-    return findings
+    return calibrate_findings(findings, lines)
 
 
 def scan_target(target: Path) -> Dict[str, object]:
@@ -329,34 +681,24 @@ def scan_target(target: Path) -> Dict[str, object]:
     for path in files:
         findings.extend(scan_file(path, root))
 
-    category_scores: Dict[str, int] = {}
-    category_counts: Dict[str, int] = {}
-    severity_counts: Dict[str, int] = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0}
-
-    for finding in findings:
-        category_scores[finding.category] = category_scores.get(finding.category, 0) + finding.points
-        category_counts[finding.category] = category_counts.get(finding.category, 0) + 1
-        severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
-
-    signatures = detect_signatures(category_counts, findings)
-    signature_score = sum(sig["points"] for sig in signatures)
-    score = min(100, sum(f.points for f in findings) + signature_score)
+    aggregate = aggregate_scan(findings)
 
     return {
         "files_scanned": len(files),
-        "findings": findings,
-        "score": score,
-        "category_scores": category_scores,
-        "category_counts": category_counts,
-        "severity_counts": severity_counts,
-        "signatures": signatures,
+        "findings": aggregate["findings"],
+        "score": aggregate["score"],
+        "category_scores": aggregate["category_scores"],
+        "category_counts": aggregate["category_counts"],
+        "severity_counts": aggregate["severity_counts"],
+        "signatures": aggregate["signatures"],
     }
 
 
 def scan_prompt(text: str) -> Dict[str, object]:
     findings: List[Finding] = []
     for pattern in PATTERNS:
-        if pattern.regex.search(text):
+        match = pattern.regex.search(text)
+        if match:
             findings.append(
                 Finding(
                     file="<brief>",
@@ -366,27 +708,21 @@ def scan_prompt(text: str) -> Dict[str, object]:
                     points=pattern.points,
                     reason=pattern.reason,
                     excerpt=text[:180],
+                    match=match.group(0)[:80],
                 )
             )
 
-    category_scores: Dict[str, int] = {}
-    category_counts: Dict[str, int] = {}
-    severity_counts: Dict[str, int] = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0}
-    for finding in findings:
-        category_scores[finding.category] = category_scores.get(finding.category, 0) + finding.points
-        category_counts[finding.category] = category_counts.get(finding.category, 0) + 1
-        severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
-
-    signatures = detect_signatures(category_counts, findings)
-    score = min(100, sum(f.points for f in findings) + prompt_risk_score(text) + sum(sig["points"] for sig in signatures))
+    findings = calibrate_findings(findings, [text])
+    aggregate = aggregate_scan(findings)
+    score = min(100, int(aggregate["score"]) + prompt_risk_score(text))
     return {
         "files_scanned": 0,
-        "findings": findings,
+        "findings": aggregate["findings"],
         "score": score,
-        "category_scores": category_scores,
-        "category_counts": category_counts,
-        "severity_counts": severity_counts,
-        "signatures": signatures,
+        "category_scores": aggregate["category_scores"],
+        "category_counts": aggregate["category_counts"],
+        "severity_counts": aggregate["severity_counts"],
+        "signatures": aggregate["signatures"],
     }
 
 
@@ -529,7 +865,7 @@ def hard_blockers_for(scan: Dict[str, object]) -> List[str]:
 
 def summarize_findings(findings: Sequence[Finding], limit: int = 18) -> List[Dict[str, object]]:
     severity_order = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}
-    ordered = sorted(findings, key=lambda f: (severity_order.get(f.severity, 9), f.file, f.line))
+    ordered = sorted(findings, key=lambda f: (severity_order.get(f.severity, 9), -finding_points(f), f.file, f.line))
     return [
         {
             "file": f.file,
@@ -538,6 +874,13 @@ def summarize_findings(findings: Sequence[Finding], limit: int = 18) -> List[Dic
             "category": f.category,
             "reason": f.reason,
             "excerpt": f.excerpt,
+            "match": f.match,
+            "confidence": f.confidence,
+            "points": finding_points(f),
+            "raw_points": f.points,
+            "context": f.context,
+            "counter_evidence": list(f.counter_evidence),
+            "amplifiers": list(f.amplifiers),
         }
         for f in ordered[:limit]
     ]
@@ -981,7 +1324,13 @@ def print_autopsy_markdown(result: Dict[str, object]) -> None:
     assert isinstance(lines, list)
     if lines:
         for item in lines:
-            print(f"- {item['severity']} / {item['category']}: `{item['file']}:{item['line']}` - {item['reason']} - {item['excerpt']}")
+            meta = f"{item.get('confidence', 'medium')}, {item.get('points', '?')}pt"
+            print(f"- {item['severity']} / {item['category']} [{meta}]: `{item['file']}:{item['line']}` - {item['reason']} - {item['excerpt']}")
+            if item.get("context"):
+                print(f"  Context: {item['context']}")
+            counters = item.get("counter_evidence") or []
+            if counters:
+                print(f"  Counter-evidence: {', '.join(str(counter) for counter in counters)}")
     else:
         print("- No suspicious lines detected by deterministic scanner.")
     print()
@@ -1055,7 +1404,10 @@ def print_markdown(result: Dict[str, object]) -> None:
     findings = scan["top_findings"]
     if findings:
         for item in findings:
-            print(f"- {item['severity']} / {item['category']}: `{item['file']}:{item['line']}` - {item['reason']} - {item['excerpt']}")
+            meta = f"{item.get('confidence', 'medium')}, {item.get('points', '?')}pt"
+            print(f"- {item['severity']} / {item['category']} [{meta}]: `{item['file']}:{item['line']}` - {item['reason']} - {item['excerpt']}")
+            if item.get("context"):
+                print(f"  Context: {item['context']}")
     else:
         print("- No findings.")
     print()

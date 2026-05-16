@@ -2,8 +2,8 @@
 """Deterministic helper CLI for the no-slop skill.
 
 The skill workflow remains the authority for edits and live subagent judging.
-This script gives a local scan, slop signatures, dials, presets, and a strict
-judge-gate approximation that can run from a shell.
+This script gives a local scan, slop signatures, dials, presets, a strict
+judge-gate approximation, and an autopsy report that can run from a shell.
 """
 
 from __future__ import annotations
@@ -225,6 +225,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("-r", "--redesign", action="store_true", help="Plan full redesign.")
     parser.add_argument("-j", "--judge", action="store_true", help="Run strict judge gate.")
     parser.add_argument("--prevent", action="store_true", help="Run prevention contract mode.")
+    parser.add_argument("--autopsy", action="store_true", help="Emit a forensic AI-slop autopsy report.")
     parser.add_argument("-e", "--economy", action="store_true", help="Disable subagent judge expectation.")
     parser.add_argument("--preset", choices=sorted(PRESETS), default=None, help="Apply a dial preset.")
     parser.add_argument("--dial", action="append", default=[], metavar="NAME=0..10", help="Override a control dial.")
@@ -565,12 +566,13 @@ def build_result(args: argparse.Namespace) -> Dict[str, object]:
     findings = scan["findings"]
     assert isinstance(findings, list)
 
-    return {
+    result = {
         "mode": mode,
         "target": str(target),
         "preset": args.preset or "default",
         "economy": bool(args.economy),
         "no_write": bool(args.no_write),
+        "autopsy": bool(args.autopsy),
         "dials": dials,
         "scan": {
             "files_scanned": scan["files_scanned"],
@@ -584,6 +586,9 @@ def build_result(args: argparse.Namespace) -> Dict[str, object]:
         "judge": gate,
         "next_action": next_action(mode, gate),
     }
+    if args.autopsy:
+        result["autopsy_report"] = build_autopsy(result)
+    return result
 
 
 def prompt_risk_score(text: str) -> int:
@@ -605,6 +610,405 @@ def next_action(mode: str, gate: Dict[str, object]) -> str:
     if gate["gate"] == "FAIL":
         return "Run remediation pass, re-scan, and re-judge."
     return "Proceed to verification."
+
+
+AUTOPSY_SYSTEMS = (
+    {
+        "name": "Visual Identity",
+        "categories": ("Aesthetic Defaults", "Typography Sameness", "Brand Incoherence"),
+        "fail_at": 5,
+        "warn_at": 1,
+        "pass_note": "No deterministic template-aesthetic signal.",
+        "fail_note": "Visual personality is carried by familiar generated defaults.",
+    },
+    {
+        "name": "Product Proof",
+        "categories": ("Copy Void",),
+        "signatures": ("Dashboard Theater", "Copy Fog Landing"),
+        "fail_at": 4,
+        "warn_at": 1,
+        "pass_note": "No vague proof or fake-proof signal detected.",
+        "fail_note": "Claims are stronger than the evidence visible in the interface.",
+    },
+    {
+        "name": "Information Architecture",
+        "categories": ("Layout Formulae", "Hierarchy Collapse"),
+        "fail_at": 5,
+        "warn_at": 1,
+        "pass_note": "No formulaic page skeleton detected.",
+        "fail_note": "The structure reads like a reusable landing-page template.",
+    },
+    {
+        "name": "Component Discipline",
+        "categories": ("Component Soup", "Code and Design-System Smells", "Design Token Violation"),
+        "fail_at": 5,
+        "warn_at": 1,
+        "pass_note": "No component-soup or token-collapse signal detected.",
+        "fail_note": "Components look assembled from trend defaults rather than a system.",
+    },
+    {
+        "name": "Interaction and Motion",
+        "categories": ("Motion Spam", "Responsive and Performance Slop"),
+        "fail_at": 4,
+        "warn_at": 1,
+        "pass_note": "No motion or viewport trap signal detected.",
+        "fail_note": "Motion/performance choices may be decorative or fragile.",
+    },
+    {
+        "name": "Accessibility",
+        "categories": ("Accessibility Slop",),
+        "fail_at": 1,
+        "warn_at": 1,
+        "pass_note": "No deterministic focus/accessibility blocker detected.",
+        "fail_note": "Accessibility risk blocks a credible ship decision.",
+    },
+)
+
+FIX_PLAYBOOK = {
+    "Aesthetic Defaults": "Replace template gradients/glass with a product-specific palette, material model, and image or data proof.",
+    "Layout Formulae": "Rebuild the first viewport around the user's job, not hero/features/pricing muscle memory.",
+    "Component Soup": "Remove decorative card/icon repetition; use components only where they clarify hierarchy or action.",
+    "Typography Sameness": "Create a deliberate type scale and reading rhythm instead of default generated font signals.",
+    "Motion Spam": "Keep motion only for state, feedback, or spatial continuity; add reduced-motion proof when motion remains.",
+    "Copy Void": "Replace broad promises with concrete product nouns, user jobs, constraints, and evidence.",
+    "Accessibility Slop": "Restore visible focus, labels, keyboard paths, and non-hover access before visual polish.",
+    "Responsive and Performance Slop": "Remove viewport traps and heavy effects that threaten mobile framing or performance.",
+    "Code and Design-System Smells": "Extract repeated utility soup into coherent variants or semantic component styles.",
+    "Design Token Violation": "Route raw colors, shadows, radii, and spacing through semantic tokens.",
+    "Hierarchy Collapse": "Make the primary action, proof, metadata, and secondary content visibly different in weight.",
+    "Brand Incoherence": "Translate vague style words into concrete product-specific palette, type, shape, voice, and proof.",
+}
+
+AUTOPSY_SIGNATURE_CAUSES = {
+    "Startup Gradient Stack": "Generic AI SaaS composition: trend gradients, vague copy, and formulaic landing structure collapsed into one surface.",
+    "Glass Feature Soup": "Decorative glass/card styling is doing the job that product evidence should do.",
+    "Dashboard Theater": "Unsupported metrics or dashboard theater are being used as trust signals.",
+    "Copy Fog Landing": "The page relies on abstract claims where concrete product proof should be.",
+    "Motion Confetti": "Motion appears as decoration rather than state, continuity, or feedback.",
+    "Token Collapse": "Raw visual values are bypassing the system often enough to erode design coherence.",
+    "Brand Costume": "The interface is wearing a fashionable aesthetic without proving why it belongs to this product.",
+}
+
+
+def signature_names(scan: Dict[str, object]) -> List[str]:
+    signatures = scan["signatures"]
+    assert isinstance(signatures, list)
+    return [str(sig["name"]) for sig in signatures]
+
+
+def category_count(scan: Dict[str, object], category: str) -> int:
+    counts = scan["category_counts"]
+    assert isinstance(counts, dict)
+    return int(counts.get(category, 0))
+
+
+def top_categories(scan: Dict[str, object], limit: int = 6) -> List[Dict[str, object]]:
+    counts = scan["category_counts"]
+    scores = scan["category_scores"]
+    assert isinstance(counts, dict)
+    assert isinstance(scores, dict)
+    rows = [
+        {"category": category, "count": int(count), "score": int(scores.get(category, 0))}
+        for category, count in counts.items()
+    ]
+    return sorted(rows, key=lambda row: (-row["score"], -row["count"], row["category"]))[:limit]
+
+
+def autopsy_severity(score: int, gate: str) -> str:
+    if gate == "NO_SURFACE":
+        return "NO_SURFACE"
+    if score <= 15:
+        return "CLEAN"
+    if score <= 30:
+        return "RESIDUE"
+    if score <= 55:
+        return "CONTAMINATED"
+    if score <= 75:
+        return "SYSTEMIC"
+    return "CRITICAL"
+
+
+def autopsy_cause(scan: Dict[str, object], gate: Dict[str, object]) -> str:
+    if gate["gate"] == "NO_SURFACE":
+        return "No scannable UI surface was found, so there is nothing credible to judge."
+    score = int(scan["score"])
+    if score <= 15:
+        return "No autopsy-level cause detected. Any remaining signals are minor deterministic hints, not a structural AI-slop failure."
+
+    names = signature_names(scan)
+    for name in (
+        "Startup Gradient Stack",
+        "Glass Feature Soup",
+        "Dashboard Theater",
+        "Copy Fog Landing",
+        "Token Collapse",
+        "Brand Costume",
+        "Motion Confetti",
+    ):
+        if name in names:
+            return AUTOPSY_SIGNATURE_CAUSES[name]
+
+    categories = top_categories(scan, limit=1)
+    if categories:
+        category = str(categories[0]["category"])
+        return f"Dominant failure mode: {category}. {FIX_PLAYBOOK.get(category, 'The interface carries repeated generic signals.')}"
+    return "The surface has weak genericity signals, but no dominant deterministic cause."
+
+
+def autopsy_verdict(scan: Dict[str, object], gate: Dict[str, object]) -> str:
+    score = int(scan["score"])
+    if gate["gate"] == "NO_SURFACE":
+        return "No surface. No ship decision."
+    if score <= 15 and not gate["hard_blockers"]:
+        return "No obvious generated residue. Still verify in browser and with human context."
+    if score <= 30:
+        return "Usable shape, visible residue. Clean before a serious launch."
+    if score <= 55:
+        return "Looks designed at a glance, but the fingerprints are too loud."
+    if score <= 75:
+        return "The generic system is structural. Redesign is probably faster than patching."
+    return "Looks shippable. Is not shippable."
+
+
+def any_product_test(scan: Dict[str, object]) -> Dict[str, str]:
+    names = set(signature_names(scan))
+    has_generic_stack = bool(
+        names.intersection({"Startup Gradient Stack", "Copy Fog Landing", "Glass Feature Soup", "Brand Costume"})
+    )
+    layout = category_count(scan, "Layout Formulae")
+    copy = category_count(scan, "Copy Void")
+    aesthetic = category_count(scan, "Aesthetic Defaults")
+
+    if has_generic_stack or (layout and copy and aesthetic):
+        return {
+            "risk": "HIGH",
+            "finding": "This UI could become a CRM, AI SaaS, analytics tool, or productivity app by changing mostly the logo and nouns.",
+        }
+    if layout or copy:
+        return {
+            "risk": "MEDIUM",
+            "finding": "Some structure or language is reusable across too many products; product-specific proof should be strengthened.",
+        }
+    return {
+        "risk": "LOW",
+        "finding": "The deterministic scan did not find a strong could-be-any-product pattern.",
+    }
+
+
+def autopsy_systems(scan: Dict[str, object]) -> List[Dict[str, str]]:
+    names = set(signature_names(scan))
+    rows: List[Dict[str, str]] = []
+    for system in AUTOPSY_SYSTEMS:
+        count = sum(category_count(scan, category) for category in system["categories"])
+        for signature in system.get("signatures", ()):
+            if signature in names:
+                count += 2
+        if count >= int(system["fail_at"]):
+            status = "FAIL"
+            note = str(system["fail_note"])
+        elif count >= int(system["warn_at"]):
+            status = "WARN"
+            note = f"{count} deterministic signal(s) detected."
+        else:
+            status = "PASS"
+            note = str(system["pass_note"])
+        rows.append({"system": str(system["name"]), "status": status, "evidence": note})
+    return rows
+
+
+def autopsy_pretends_and_proves(scan: Dict[str, object]) -> Dict[str, str]:
+    names = set(signature_names(scan))
+    counts = scan["category_counts"]
+    assert isinstance(counts, dict)
+
+    if "Dashboard Theater" in names:
+        return {
+            "pretends": "A data-backed product with operational credibility.",
+            "proves": "The metrics and charts need sources, labels, or a decision path before they can carry trust.",
+        }
+    if counts.get("Copy Void", 0) and counts.get("Layout Formulae", 0):
+        return {
+            "pretends": "A polished product story with momentum and conversion intent.",
+            "proves": "The story is still mostly abstract claims and familiar section choreography.",
+        }
+    if counts.get("Aesthetic Defaults", 0) and counts.get("Component Soup", 0):
+        return {
+            "pretends": "Premium visual craft.",
+            "proves": "The craft is coming from trend styling rather than product-specific decisions.",
+        }
+    if counts.get("Accessibility Slop", 0):
+        return {
+            "pretends": "A ready-to-ship interface.",
+            "proves": "Keyboard or focus risk still blocks a real release.",
+        }
+    if int(scan["score"]) <= 15:
+        return {
+            "pretends": "Nothing suspicious from deterministic patterns alone.",
+            "proves": "A deeper review should focus on product truth, browser behavior, and real user workflows.",
+        }
+    return {
+        "pretends": "A complete interface.",
+        "proves": "The deterministic scan found repeated residue that still needs product-specific justification.",
+    }
+
+
+def autopsy_reality_handoff(scan: Dict[str, object]) -> Dict[str, object]:
+    names = set(signature_names(scan))
+    reasons: List[str] = []
+    if "Dashboard Theater" in names:
+        reasons.append("fake or unsupported metrics may be presented as product proof")
+    if category_count(scan, "Copy Void"):
+        reasons.append("copy/proof may overclaim what the UI actually demonstrates")
+    if category_count(scan, "Layout Formulae"):
+        reasons.append("primary CTAs and page sections may still be static demo choreography")
+    if category_count(scan, "Accessibility Slop"):
+        reasons.append("focus/accessibility risk affects real workflow completion")
+
+    if reasons:
+        return {
+            "recommendation": "LOAD_REALITY_SKILL",
+            "skill": "skills/reality-skill/SKILL.md",
+            "reasons": reasons,
+        }
+    return {
+        "recommendation": "OPTIONAL",
+        "skill": "skills/reality-skill/SKILL.md",
+        "reasons": ["no fake-proof/action signal detected by deterministic scan"],
+    }
+
+
+def autopsy_fix_order(scan: Dict[str, object], limit: int = 6) -> List[Dict[str, str]]:
+    order = []
+    for item in top_categories(scan, limit=limit):
+        category = str(item["category"])
+        order.append(
+            {
+                "category": category,
+                "why": f"{item['count']} hit(s), {item['score']} point(s)",
+                "move": FIX_PLAYBOOK.get(category, "Review this category and replace generic residue with product-specific decisions."),
+            }
+        )
+    if not order:
+        order.append(
+            {
+                "category": "Manual product review",
+                "why": "No deterministic category hits.",
+                "move": "Verify browser behavior, real content, mobile layout, and user workflow completion.",
+            }
+        )
+    return order
+
+
+def build_autopsy(result: Dict[str, object]) -> Dict[str, object]:
+    scan = result["scan"]
+    gate = result["judge"]
+    assert isinstance(scan, dict)
+    assert isinstance(gate, dict)
+    score = int(scan["score"])
+    severity = autopsy_severity(score, str(gate["gate"]))
+    pretends = autopsy_pretends_and_proves(scan)
+    any_product = any_product_test(scan)
+    top_findings = scan["top_findings"]
+    assert isinstance(top_findings, list)
+    signatures = scan["signatures"]
+    assert isinstance(signatures, list)
+
+    share_line = autopsy_verdict(scan, gate)
+    if score > 15:
+        share_line = f"{share_line} {any_product['finding']}"
+
+    return {
+        "severity": severity,
+        "cause_of_death": autopsy_cause(scan, gate),
+        "verdict": autopsy_verdict(scan, gate),
+        "any_product_test": any_product,
+        "fingerprints": signatures,
+        "systems": autopsy_systems(scan),
+        "suspicious_lines": top_findings[:10],
+        "pretends": pretends["pretends"],
+        "proves": pretends["proves"],
+        "reality_handoff": autopsy_reality_handoff(scan),
+        "fix_order": autopsy_fix_order(scan),
+        "share_line": share_line,
+    }
+
+
+def print_autopsy_markdown(result: Dict[str, object]) -> None:
+    scan = result["scan"]
+    gate = result["judge"]
+    report = result["autopsy_report"]
+    assert isinstance(scan, dict)
+    assert isinstance(gate, dict)
+    assert isinstance(report, dict)
+
+    print("# AI UI Autopsy")
+    print()
+    print(f"Target: {result['target']}")
+    print(f"Mode: {result['mode']}")
+    print(f"AI-slop score: {scan['score']}/100")
+    print(f"Severity: {report['severity']}")
+    print(f"Judge gate: {gate['gate']}")
+    print(f"Verdict: {report['verdict']}")
+    print()
+    print("## Cause Of Death")
+    print(str(report["cause_of_death"]))
+    print()
+    print("## Any-Product Test")
+    any_product = report["any_product_test"]
+    assert isinstance(any_product, dict)
+    print(f"Risk: {any_product['risk']}")
+    print(str(any_product["finding"]))
+    print()
+    print("## Fingerprints")
+    fingerprints = report["fingerprints"]
+    assert isinstance(fingerprints, list)
+    if fingerprints:
+        for fingerprint in fingerprints:
+            print(f"- {fingerprint['name']} ({fingerprint['severity']}): {fingerprint['reason']}")
+    else:
+        print("- None detected by deterministic scanner.")
+    print()
+    print("## Forensic Systems")
+    print("| System | Status | Evidence |")
+    print("| --- | --- | --- |")
+    systems = report["systems"]
+    assert isinstance(systems, list)
+    for row in systems:
+        print(f"| {row['system']} | {row['status']} | {row['evidence']} |")
+    print()
+    print("## Most Suspicious Lines")
+    lines = report["suspicious_lines"]
+    assert isinstance(lines, list)
+    if lines:
+        for item in lines:
+            print(f"- {item['severity']} / {item['category']}: `{item['file']}:{item['line']}` - {item['reason']} - {item['excerpt']}")
+    else:
+        print("- No suspicious lines detected by deterministic scanner.")
+    print()
+    print("## What It Pretends")
+    print(str(report["pretends"]))
+    print()
+    print("## What It Proves")
+    print(str(report["proves"]))
+    print()
+    print("## Reality Handoff")
+    handoff = report["reality_handoff"]
+    assert isinstance(handoff, dict)
+    print(f"Recommendation: {handoff['recommendation']}")
+    print(f"Skill: {handoff['skill']}")
+    reasons = handoff["reasons"]
+    assert isinstance(reasons, list)
+    for reason in reasons:
+        print(f"- {reason}")
+    print()
+    print("## Fix Order")
+    fixes = report["fix_order"]
+    assert isinstance(fixes, list)
+    for index, fix in enumerate(fixes, start=1):
+        print(f"{index}. {fix['category']}: {fix['move']} ({fix['why']})")
+    print()
+    print("## Share Line")
+    print(f"> {report['share_line']}")
 
 
 def print_markdown(result: Dict[str, object]) -> None:
@@ -678,6 +1082,8 @@ def main(argv: Sequence[str]) -> int:
 
     if args.json:
         print(json.dumps(result, indent=2))
+    elif args.autopsy:
+        print_autopsy_markdown(result)
     else:
         print_markdown(result)
     return 0

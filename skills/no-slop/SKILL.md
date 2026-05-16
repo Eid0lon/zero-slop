@@ -21,6 +21,7 @@ no-slop --fix [target]
 no-slop --redesign [target]
 no-slop --judge [target]
 no-slop --prevent [target-or-brief]
+no-slop --autopsy [target-or-brief]
 no-slop -e --scan [target]
 ```
 
@@ -31,6 +32,7 @@ Short flags:
 - `-r`, `--redesign`: full redesign.
 - `-j`, `--judge`: run the strict judge panel.
 - `--prevent`: prevention mode before UI generation.
+- `--autopsy`: emit the forensic AI UI Autopsy report.
 - `-e`, `--economy`: disable judge subagents and use local deterministic checks only.
 
 Default mode is `--scan`. Judge mode is active by default unless `--economy` is set.
@@ -82,6 +84,7 @@ dials:
 slop_score_before:
 slop_score_after:
 slop_signatures:
+autopsy_report:
 issues_by_severity:
 design_direction:
 judge_panel:
@@ -98,7 +101,9 @@ For a deterministic local scan, run:
 
 ```bash
 python no-slop/scripts/no_slop_cli.py --scan <target>
+python no-slop/scripts/no_slop_cli.py --autopsy <target>
+python no-slop/scripts/no_slop_cli.py --prevent "brief text" --autopsy
 python no-slop/scripts/no_slop_cli.py --preset dashboard --dial STRICTNESS=10 --scan <target>
 ```
 
-The CLI supports scoring, dials, presets, signatures, economy mode, and a deterministic judge-gate summary. The Codex skill workflow remains the authority for actual code edits and live subagent judging.
+The CLI supports scoring, dials, presets, signatures, economy mode, autopsy reporting, and a deterministic judge-gate summary. The Codex skill workflow remains the authority for actual code edits and live subagent judging.

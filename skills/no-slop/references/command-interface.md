@@ -16,6 +16,7 @@ mode:
 
 options:
   -e | --economy
+  --autopsy
   --preset <name>
   --dial NAME=0..10
   --json
@@ -49,6 +50,22 @@ Use economy mode when:
 - Tools cannot launch subagents.
 
 Do not silently enable economy mode.
+
+## Autopsy Mode
+
+`--autopsy` is a report format for the deterministic scanner. It does not edit files.
+
+It turns scan findings into a forensic narrative:
+
+- cause of death
+- AI fingerprints
+- any-product test
+- suspicious lines
+- what the UI pretends versus what it proves
+- reality-skill handoff
+- fix order
+
+Use it when the result needs to be readable, shareable, and persuasive for code review or public demos.
 
 ## Dials
 
@@ -87,6 +104,30 @@ Judge gate:
 
 ## Category Breakdown
 | Category | Count | Score |
+```
+
+### Autopsy
+
+```markdown
+# AI UI Autopsy
+
+Target:
+Mode:
+AI-slop score:
+Severity:
+Judge gate:
+Verdict:
+
+## Cause Of Death
+## Any-Product Test
+## Fingerprints
+## Forensic Systems
+## Most Suspicious Lines
+## What It Pretends
+## What It Proves
+## Reality Handoff
+## Fix Order
+## Share Line
 ```
 
 ### Fix or Redesign

@@ -28,7 +28,7 @@ Three agent skills that flag generic AI UI, build better product-specific interf
 
 AI coding agents tend to output the same visual cliches -- purple gradients, glass cards, "empower your workflow" copy, three feature cards in a centered hero. These are pattern-matched from training data, not designed for *your* product.
 
-`no-slop` scans frontend code for these patterns and scores them. `perfect-design` helps define what the UI *should* be before any code gets written. `reality-skill` checks whether the resulting app is more than a static demo. They work together: `no-slop` blocks generic output, `perfect-design` builds the replacement, and `reality-skill` makes the workflow finishable.
+`no-slop` scans frontend code for these patterns, scores them, and can generate an AI UI Autopsy report that explains why a surface feels fake. `perfect-design` helps define what the UI *should* be before any code gets written. `reality-skill` checks whether the resulting app is more than a static demo. They work together: `no-slop` blocks generic output, `perfect-design` builds the replacement, and `reality-skill` makes the workflow finishable.
 
 ---
 
@@ -48,6 +48,7 @@ AI coding agents tend to output the same visual cliches -- purple gradients, gla
 
 - Scans `.tsx`, `.jsx`, `.vue`, `.svelte`, `.css`, `.html` files for 15 categories of generic patterns
 - Assigns a 0--100 slop score and names which "slop signatures" matched
+- Emits an AI UI Autopsy: cause of death, fingerprints, suspicious lines, any-product test, and fix order
 - Runs a 6-role review protocol to decide if the UI passes
 - Can do surgical fixes (`--fix`) or full rewrites (`--redesign`)
 - Also works on briefs before code is generated (`--prevent`)
@@ -88,6 +89,7 @@ Then activate each skill you need in your agent.
 | `--redesign` | Full redesign when the score is too high |
 | `--judge` | Runs the 6-role review protocol |
 | `--prevent` | Audits a brief before any code is generated |
+| `--autopsy` | Emits a forensic report explaining why the UI feels generic, fake, or demo-only |
 | `-e` | Economy mode -- deterministic checks only, no live judges |
 
 ### `perfect-design`

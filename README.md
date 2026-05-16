@@ -64,7 +64,7 @@ AI coding agents tend to output the same visual cliches -- purple gradients, gla
 ## Install
 
 ```bash
-npx skills add <url>
+npx skills add Eid0lon/zero-slop
 ```
 
 Then activate each skill you need in your agent.

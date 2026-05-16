@@ -1,0 +1,6 @@
+interface:
+  display_name: "Reality Skill"
+  short_description: "Turns demo UIs into real workflows"
+  default_prompt: "Use $reality-skill to audit this app for dead actions, fake data, missing states, validation, persistence, navigation, and truthful workflow completion."
+policy:
+  allow_implicit_invocation: true

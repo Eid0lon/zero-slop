@@ -9,6 +9,7 @@ No Slop owns anti-slop UI detection, remediation, prevention, and strict anti-ge
 - `review`: when UI changes touch logic, data flow, auth, billing, persistence, or security-sensitive behavior.
 - `debug`: when visual defects come from runtime behavior, hydration, async state, or measurements.
 - `perfect-design`: when the user asks for broad creative UI generation, premium product-specific design, or senior design-engineering output, and No Slop is used as the anti-generic quality gate.
+- `reality-skill`: after No Slop remediation when the target is an app, dashboard, form, CRUD flow, onboarding, checkout, settings, auth-like flow, or contains fake proof/data/actions that must become honest and usable.
 - `perfect-shot`: when the design work is one part of a larger first-pass implementation.
 - `create-deep-search`: when the user explicitly needs current design research, domain UX research, or external references.
 
@@ -38,5 +39,6 @@ Done means:
 - Active dials and preset reported.
 - Judge gate passed or explicitly blocked.
 - Accessibility and responsive checks completed or limitation stated.
+- Reality Skill handoff completed or marked not applicable with reason.
 - Build/lint/type/test checks run when available.
 - Remaining risk named.

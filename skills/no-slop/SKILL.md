@@ -7,6 +7,8 @@ description: Strict anti-slop UI design system for scanning, fixing, redesigning
 
 No Slop is a cold, precise anti-slop workflow. Its job is to detect generic AI UI, remove it, and block weak output before it ships.
 
+After anti-slop remediation, hand app-like surfaces to `reality-skill` so the result is not only less generic, but also usable beyond a static mockup.
+
 ## Command Interface
 
 Use the command grammar in `references/command-interface.md`.
@@ -61,6 +63,7 @@ Load only what the task needs:
 - Do not ship purple-blue gradients, glass cards, card soup, vague copy, fake proof, motion spam, token chaos, or brandless layouts unless the product context specifically justifies them.
 - Do not generate UI in `--prevent` until the detector and judge panel have approved a design contract.
 - Do not finish `--fix` or `--redesign` with failed judge gates. Iterate. If the gate still fails, block the result and state why.
+- At the end of `--fix` or `--redesign`, load the sibling skill `skills/reality-skill/SKILL.md` when the target includes an app, dashboard, form, CRUD flow, onboarding, checkout, settings, auth-like flow, fake proof, fake data, or primary actions. Use it to remove demoware without broad redesign.
 - Preserve behavior, accessibility, semantic structure, focus states, keyboard access, and responsive stability.
 - Use existing design tokens and component conventions when they are coherent. Replace them only when they are the problem.
 - For operational tools, prefer dense, scan-friendly, restrained interfaces. For expressive products, create a deliberate art direction, not decoration.
@@ -85,6 +88,8 @@ judge_panel:
 judge_gate:
 files_changed:
 verification:
+reality_handoff:
+reality_changes:
 ```
 
 ## Local CLI Helper

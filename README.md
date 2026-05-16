@@ -3,16 +3,16 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/status-early%20public-important?style=flat-square" alt="Status">
-  <img src="https://img.shields.io/badge/skills-2-success?style=flat-square" alt="Skills">
+  <img src="https://img.shields.io/badge/skills-3-success?style=flat-square" alt="Skills">
 </p>
 
-Two agent skills that flag and fix generic AI-generated UI patterns.
+Three agent skills that flag generic AI UI, build better product-specific interfaces, and turn demo screens into real workflows.
 
 > **Repo:** [github.com/Eid0lon/zero-slop](https://github.com/Eid0lon/zero-slop)
 
 - [What it does](#what-it-does)
 - [What this is not](#what-this-is-not)
-- [The two skills](#the-two-skills)
+- [The three skills](#the-three-skills)
 - [Install](#install)
 - [Commands](#commands)
 - [How they work together](#how-they-work-together)
@@ -28,7 +28,7 @@ Two agent skills that flag and fix generic AI-generated UI patterns.
 
 AI coding agents tend to output the same visual cliches -- purple gradients, glass cards, "empower your workflow" copy, three feature cards in a centered hero. These are pattern-matched from training data, not designed for *your* product.
 
-`no-slop` scans frontend code for these patterns and scores them. `perfect-design` helps define what the UI *should* be before any code gets written. They work together: `no-slop` blocks bad output, `perfect-design` builds the replacement.
+`no-slop` scans frontend code for these patterns and scores them. `perfect-design` helps define what the UI *should* be before any code gets written. `reality-skill` checks whether the resulting app is more than a static demo. They work together: `no-slop` blocks generic output, `perfect-design` builds the replacement, and `reality-skill` makes the workflow finishable.
 
 ---
 
@@ -42,7 +42,7 @@ AI coding agents tend to output the same visual cliches -- purple gradients, gla
 
 ---
 
-## The two skills
+## The three skills
 
 ### `no-slop` -- detect and fix generic UI
 
@@ -58,6 +58,14 @@ AI coding agents tend to output the same visual cliches -- purple gradients, gla
 - Has 6 product archetypes (operational SaaS, dashboard, commerce, portfolio, editorial, dev tool) to set expectations
 - Scores UI against a 14-dimension rubric
 - Composes with `no-slop` -- runs it before and after any design pass
+
+### `reality-skill` -- turn demo UI into real workflow
+
+- Traces the primary user job from entry to completion
+- Blocks dead buttons, fake data, fake claims, decorative dashboards, and placeholder handlers
+- Requires relevant loading, empty, error, disabled, success, validation, persistence, and navigation states
+- Allows honest local/mock boundaries when production services are unavailable
+- Keeps changes small: finish the workflow without redesigning the whole product
 
 ---
 
@@ -94,6 +102,10 @@ Then activate each skill you need in your agent.
 | `--verify` | Build, lint, browser, and accessibility checks |
 | `-e` | Economy mode -- deterministic checks only, no live judges |
 
+### `reality-skill`
+
+Reality Skill is a workflow skill rather than a CLI command. Invoke it when an app, dashboard, form, checkout, onboarding flow, settings page, or CRUD surface must work beyond a static mockup.
+
 ---
 
 ## How they work together
@@ -104,7 +116,8 @@ Then activate each skill you need in your agent.
 3. perfect-design --create/polish--  build or refine the interface
 4. no-slop --judge               --  verify no slop was introduced
 5. perfect-design --judge        --  verify the result is product-specific
-6. perfect-design --verify       --  build, lint, browser, a11y checks
+6. reality-skill                 --  verify the primary workflow is real
+7. perfect-design --verify       --  build, lint, browser, a11y checks
 ```
 
 If `no-slop` isn't available, `perfect-design` notes it and applies a local checklist. It never claims a pass it can't back up.
@@ -156,7 +169,7 @@ Prompt:
 
 ## Dials and presets
 
-Both skills use dials (0--10 sliders) that change how strict the checks are. A preset is just a bundle of dial values for a common product type.
+`no-slop` and `perfect-design` use dials (0--10 sliders) that change how strict the checks are. A preset is just a bundle of dial values for a common product type. `reality-skill` uses fixed workflow gates instead of dials.
 
 | Preset | What it expects |
 |---|---|
@@ -179,8 +192,8 @@ No. It flags generic output and enforces product-specific decisions, but it does
 </details>
 
 <details>
-<summary>Do I need both skills?</summary>
-No. `no-slop` works standalone for scanning and fixing generic patterns. `perfect-design` adds the Design Contract and premium rubric if you want both detection and direction.
+<summary>Do I need every skill?</summary>
+No. `no-slop` works standalone for scanning generic patterns. `perfect-design` adds the Design Contract and premium rubric when you need direction. `reality-skill` is for apps and workflows that must work beyond a static mockup.
 </details>
 
 <details>

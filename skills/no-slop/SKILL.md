@@ -96,4 +96,4 @@ python no-slop/scripts/no_slop_cli.py --scan <target>
 python no-slop/scripts/no_slop_cli.py --preset dashboard --dial STRICTNESS=10 --scan <target>
 ```
 
-Wrappers are provided in `bin/no-slop` and `bin/no-slop.ps1`. The CLI supports scoring, dials, presets, signatures, economy mode, and a deterministic judge-gate summary. The Codex skill workflow remains the authority for actual code edits and live subagent judging.
+The CLI supports scoring, dials, presets, signatures, economy mode, and a deterministic judge-gate summary. The Codex skill workflow remains the authority for actual code edits and live subagent judging.

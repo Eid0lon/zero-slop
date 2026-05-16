@@ -116,4 +116,4 @@ python perfect-design/scripts/perfect_design_cli.py --audit <target>
 python perfect-design/scripts/perfect_design_cli.py --preset dashboard --dial CRAFT_STRICTNESS=10 --audit <target>
 ```
 
-Wrappers are provided in `bin/perfect-design` and `bin/perfect-design.ps1`. The CLI is a precheck, not a replacement for the Codex workflow, live browser review, or subagent judging.
+The CLI is a precheck, not a replacement for the Codex workflow, live browser review, or subagent judging.

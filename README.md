@@ -15,6 +15,7 @@ Three agent skills that flag generic AI UI, build better product-specific interf
 - [The three skills](#the-three-skills)
 - [Install](#install)
 - [Commands](#commands)
+- [Scan vs Autopsy](#scan-vs-autopsy)
 - [How they work together](#how-they-work-together)
 - [What it looks for](#what-it-looks-for)
 - [Example](#example)
@@ -84,12 +85,12 @@ Then activate each skill you need in your agent.
 
 | Command | What it does |
 |---|---|
-| `--scan` | Scans frontend files and returns a 0--100 slop score |
+| `--autopsy` | Human-readable forensic report: verdict, cause, fingerprints, suspicious lines, and fix order |
+| `--scan` | Raw deterministic scan: 0--100 score, categories, signatures, and findings for debugging or CI |
 | `--fix` | Surgical fixes on specific issues |
 | `--redesign` | Full redesign when the score is too high |
 | `--judge` | Runs the 6-role review protocol |
 | `--prevent` | Audits a brief before any code is generated |
-| `--autopsy` | Emits a forensic report explaining why the UI feels generic, fake, or demo-only |
 | `-e` | Economy mode -- deterministic checks only, no live judges |
 
 ### `perfect-design`
@@ -110,16 +111,40 @@ Reality Skill is a workflow skill rather than a CLI command. Invoke it when an a
 
 ---
 
+## Scan vs Autopsy
+
+`scan` and `autopsy` use the same evidence engine, but they are for different moments.
+
+Use `--autopsy` when a human needs to understand the result:
+
+```bash
+no-slop --autopsy path/to/ui
+```
+
+Autopsy explains whether the surface is `CLEAN`, `RESIDUE`, `CONTAMINATED`, or `CRITICAL`, why it got that verdict, what fingerprints were found, and what to fix first. This is the best mode for reviews, before/after examples, sharing feedback, and deciding whether a UI is actually suspicious.
+
+Use `--scan` when a developer or CI job needs raw data:
+
+```bash
+no-slop --scan path/to/ui
+no-slop --scan --json path/to/ui
+```
+
+Scan returns the calibrated score, category scores, signatures, and exact findings. It is useful for debugging a specific line, writing tests, gating CI, or feeding another tool. In practice: autopsy is the product-facing diagnosis; scan is the machine-readable inspection layer underneath it.
+
+---
+
 ## How they work together
 
 ```
 1. perfect-design --contract     --  decide what the product is before code
-2. no-slop --scan                --  check existing UI for generic patterns
+2. no-slop --autopsy             --  understand existing UI and its failure mode
 3. perfect-design --create/polish--  build or refine the interface
-4. no-slop --judge               --  verify no slop was introduced
-5. perfect-design --judge        --  verify the result is product-specific
-6. reality-skill                 --  verify the primary workflow is real
-7. perfect-design --verify       --  build, lint, browser, a11y checks
+4. no-slop --scan --json         --  debug exact findings or run CI checks
+5. no-slop --judge               --  verify no slop was introduced
+6. perfect-design --judge        --  verify the result is product-specific
+7. reality-skill                 --  verify the primary workflow is real
+8. perfect-design --verify       --  build, lint, browser, a11y checks
 ```
 
 If `no-slop` isn't available, `perfect-design` notes it and applies a local checklist. It never claims a pass it can't back up.

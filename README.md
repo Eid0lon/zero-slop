@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/skills-3-success?style=flat-square" alt="Skills">
 </p>
 
-Three agent skills that flag generic AI UI, build better product-specific interfaces, and turn demo screens into real workflows.
+Three agent skills to help your AI-generated interfaces feel like *your* product — not like every other AI output on the web.
 
 > **Repo:** [github.com/Eid0lon/zero-slop](https://github.com/Eid0lon/zero-slop)
 
@@ -27,47 +27,49 @@ Three agent skills that flag generic AI UI, build better product-specific interf
 
 ## What it does
 
-AI coding agents tend to output the same visual cliches -- purple gradients, glass cards, "empower your workflow" copy, three feature cards in a centered hero. These are pattern-matched from training data, not designed for *your* product.
+AI coding agents tend to reach for the same visual habits — purple gradients, glass cards, "empower your workflow" headlines, three centered feature cards above the fold. These are pulled from training data, not shaped by *your* product.
 
-`no-slop` scans frontend code for these patterns, scores them, and can generate an AI UI Autopsy report that explains why a surface feels fake. `perfect-design` helps define what the UI *should* be before any code gets written. `reality-skill` checks whether the resulting app is more than a static demo. They work together: `no-slop` blocks generic output, `perfect-design` builds the replacement, and `reality-skill` makes the workflow finishable.
+`no-slop` reviews your frontend code for these patterns and gives you a friendly report with a score and actionable suggestions. `perfect-design` helps you define the right direction before any code is written. `reality-skill` makes sure the result is a working product, not just a pretty screenshot.
+
+Together they form a gentle pipeline: `no-slop` spots the generic bits, `perfect-design` builds a product-specific replacement, and `reality-skill` completes the workflow so it actually works end-to-end.
 
 ---
 
 ## What this is not
 
-- Not a replacement for a human designer.
-- Not a visual AI model.
-- Not a complete design system.
-- Not a claim that every interface can be made perfect.
-- Not a taste-skill replacement; it focuses on QA, review, and anti-generic checks.
+- Not a replacement for a human designer — think of it as a co-pilot, not an autopilot.
+- Not a visual AI model — it works with code, not pixels.
+- Not a one-size-fits-all design system — it adapts to your product archetype.
+- Not a guarantee of perfection — but it raises the floor considerably.
+- Not a taste enforcer — it focuses on practical QA, review, and anti-cliché checks.
 
 ---
 
 ## The three skills
 
-### `no-slop` -- detect and fix generic UI
+### `no-slop` — spot and improve generic UI
 
-- Scans `.tsx`, `.jsx`, `.vue`, `.svelte`, `.css`, `.html` files with a context-calibrated evidence engine, not raw regex scoring
-- Assigns a 0--100 slop score and names which "slop signatures" matched
-- Emits an AI UI Autopsy: cause of death, fingerprints, suspicious lines, confidence, counter-evidence, any-product test, and fix order
-- Runs a 6-role review protocol to decide if the UI passes
-- Can do surgical fixes (`--fix`) or full rewrites (`--redesign`)
-- Also works on briefs before code is generated (`--prevent`)
+- Reviews `.tsx`, `.jsx`, `.vue`, `.svelte`, `.css`, `.html` files with a context-aware engine (not just regex counting)
+- Gives a 0–100 score and names the patterns it found
+- Produces an AI UI Autopsy: a human-readable summary of what feels off, which lines are involved, confidence level, counter-evidence, and suggested fix order
+- Runs a 6-role review protocol to decide if the UI passes muster
+- Can apply targeted improvements (`--fix`) or rethink the whole surface (`--redesign`)
+- Also works on briefs before any code is generated (`--prevent`)
 
-### `perfect-design` -- build product-specific UI
+### `perfect-design` — build product-specific UI
 
-- Writes a Design Contract (user, job, domain, visual decisions) before touching code
-- Has 6 product archetypes (operational SaaS, dashboard, commerce, portfolio, editorial, dev tool) to set expectations
+- Writes a Design Contract (who it's for, what job it does, the domain, and key visual choices) before touching code
+- Has 6 product archetypes (operational SaaS, dashboard, commerce, portfolio, editorial, dev tool) to set the right expectations
 - Scores UI against a 14-dimension rubric
-- Composes with `no-slop` -- runs it before and after any design pass
+- Works hand-in-hand with `no-slop` — runs it before and after every design pass
 
-### `reality-skill` -- turn demo UI into real workflow
+### `reality-skill` — turn demos into real workflows
 
-- Traces the primary user job from entry to completion
-- Blocks dead buttons, fake data, fake claims, decorative dashboards, and placeholder handlers
-- Requires relevant loading, empty, error, disabled, success, validation, persistence, and navigation states
-- Allows honest local/mock boundaries when production services are unavailable
-- Keeps changes small: finish the workflow without redesigning the whole product
+- Traces the primary user journey from entry to completion
+- Catches dead buttons, placeholder data, fake claims, decorative-only dashboards, and stub handlers
+- Asks for proper loading, empty, error, disabled, success, validation, persistence, and navigation states
+- Respects honest local/mock boundaries when production services aren't available yet
+- Keeps changes focused: finish the workflow without redesigning everything
 
 ---
 
@@ -77,7 +79,7 @@ AI coding agents tend to output the same visual cliches -- purple gradients, gla
 npx skills add Eid0lon/zero-slop
 ```
 
-Then activate each skill you need in your agent.
+Then activate the skills you need in your agent.
 
 ## Commands
 
@@ -85,13 +87,13 @@ Then activate each skill you need in your agent.
 
 | Command | What it does |
 |---|---|
-| `--autopsy` | Human-readable forensic report: verdict, cause, fingerprints, suspicious lines, and fix order |
-| `--scan` | Raw deterministic scan: 0--100 score, categories, signatures, and findings for debugging or CI |
-| `--fix` | Surgical fixes on specific issues |
-| `--redesign` | Full redesign when the score is too high |
+| `--autopsy` | A friendly forensic report: overall verdict, what's causing the issue, which lines are involved, and what to address first |
+| `--scan` | Quick deterministic scan: 0–100 score, categories, signatures, and findings — great for debugging or CI |
+| `--fix` | Targeted improvements on specific issues |
+| `--redesign` | A fresh pass when the score calls for more than small tweaks |
 | `--judge` | Runs the 6-role review protocol |
-| `--prevent` | Audits a brief before any code is generated |
-| `-e` | Economy mode -- deterministic checks only, no live judges |
+| `--prevent` | Reviews a brief before any code is generated |
+| `-e` | Economy mode — deterministic checks only, no live judges needed |
 
 ### `perfect-design`
 
@@ -100,51 +102,51 @@ Then activate each skill you need in your agent.
 | `--contract` | Writes a Design Contract from a brief |
 | `--create` | Builds a new UI from a contract |
 | `--redesign` | Rebuilds direction, layout, tokens, and copy |
-| `--polish` | Refines an existing UI without changing the product model |
+| `--polish` | Refines an existing UI while keeping the product model intact |
 | `--judge` | Runs the premium review protocol |
 | `--verify` | Build, lint, browser, and accessibility checks |
-| `-e` | Economy mode -- deterministic checks only, no live judges |
+| `-e` | Economy mode — deterministic checks only, no live judges needed |
 
 ### `reality-skill`
 
-Reality Skill is a workflow skill rather than a CLI command. Invoke it when an app, dashboard, form, checkout, onboarding flow, settings page, or CRUD surface must work beyond a static mockup.
+Reality Skill is a workflow skill rather than a CLI command. Invoke it whenever an app, dashboard, form, checkout, onboarding flow, settings page, or CRUD surface needs to go beyond a static mockup.
 
 ---
 
 ## Scan vs Autopsy
 
-`scan` and `autopsy` use the same evidence engine, but they are for different moments.
+`scan` and `autopsy` use the same engine under the hood, but they're made for different moments.
 
-Use `--autopsy` when a human needs to understand the result:
+Use `--autopsy` when you want to understand what's going on:
 
 ```bash
 no-slop --autopsy path/to/ui
 ```
 
-Autopsy explains whether the surface is `CLEAN`, `RESIDUE`, `CONTAMINATED`, or `CRITICAL`, why it got that verdict, what fingerprints were found, and what to fix first. This is the best mode for reviews, before/after examples, sharing feedback, and deciding whether a UI is actually suspicious.
+Autopsy tells you whether the surface is `CLEAN`, `RESIDUE`, `CONTAMINATED`, or `CRITICAL`, explains why it landed there, what patterns were spotted, and what to tackle first. This is the go-to for reviews, before/after comparisons, sharing with teammates, and deciding if a UI actually needs attention.
 
-Use `--scan` when a developer or CI job needs raw data:
+Use `--scan` when you want the raw numbers:
 
 ```bash
 no-slop --scan path/to/ui
 no-slop --scan --json path/to/ui
 ```
 
-Scan returns the calibrated score, category scores, signatures, and exact findings. It is useful for debugging a specific line, writing tests, gating CI, or feeding another tool. In practice: autopsy is the product-facing diagnosis; scan is the machine-readable inspection layer underneath it.
+Scan gives you the calibrated score, category breakdowns, matching signatures, and exact findings. Handy for debugging a specific line, writing tests, gating CI, or piping into another tool. In short: autopsy is the human-friendly report; scan is the machine-readable data underneath.
 
 ---
 
 ## How they work together
 
 ```
-1. perfect-design --contract     --  decide what the product is before code
-2. no-slop --autopsy             --  understand existing UI and its failure mode
-3. perfect-design --create/polish--  build or refine the interface
-4. no-slop --scan --json         --  debug exact findings or run CI checks
-5. no-slop --judge               --  verify no slop was introduced
-6. perfect-design --judge        --  verify the result is product-specific
-7. reality-skill                 --  verify the primary workflow is real
-8. perfect-design --verify       --  build, lint, browser, a11y checks
+1. perfect-design --contract     —  decide what your product is before writing code
+2. no-slop --autopsy             —  understand where the current UI stands
+3. perfect-design --create/polish —  build or refine the interface
+4. no-slop --scan --json         —  debug specific findings or add CI checks
+5. no-slop --judge               —  verify nothing generic slipped through
+6. perfect-design --judge        —  verify the result feels product-specific
+7. reality-skill                 —  verify the primary workflow actually works
+8. perfect-design --verify       —  build, lint, browser, a11y checks
 ```
 
 If `no-slop` isn't available, `perfect-design` notes it and applies a local checklist. It never claims a pass it can't back up.
@@ -153,19 +155,19 @@ If `no-slop` isn't available, `perfect-design` notes it and applies a local chec
 
 ## What it looks for
 
-Slop = UI that could belong to any product. A few things the scanner flags:
+Here are a few things the scanner keeps an eye out for:
 
-- Gradient heroes (blue-to-purple, indigo-to-pink)
-- Glassmorphism cards with blur backgrounds
-- Feature card grids with Sparkles/Shield/Rocket icons
-- "Unlock seamless productivity" and similar copy
-- Fake stats ("10K+ users", "99.9% uptime")
-- `focus:outline-none` without replacement
-- Hover scale/lift on every card
-- Useless animations with no `prefers-reduced-motion`
-- Raw hex colors bypassing design tokens
+- Hero sections with blue-to-purple or indigo-to-pink gradients
+- Glassmorphism cards with backdrop blur
+- Feature grids with Sparkles / Shield / Rocket icons
+- Copy like "Unlock seamless productivity" or "Empower your workflow"
+- Made-up stats ("10K+ users", "99.9% uptime")
+- `focus:outline-none` with no visible focus replacement
+- Hover scale or lift applied indiscriminately to every card
+- Animations that don't respect `prefers-reduced-motion`
+- Hardcoded hex colors bypassing design tokens
 
-The full pattern database and scoring rules are in `skills/no-slop/references/ai-slop-patterns.md`.
+The full pattern catalog and scoring rules live in `skills/no-slop/references/ai-slop-patterns.md`.
 
 ---
 
@@ -196,15 +198,15 @@ Prompt:
 
 ## Dials and presets
 
-`no-slop` and `perfect-design` use dials (0--10 sliders) that change how strict the checks are. A preset is just a bundle of dial values for a common product type. `reality-skill` uses fixed workflow gates instead of dials.
+`no-slop` and `perfect-design` use dials (0–10 sliders) to adjust how strict the checks are. A preset is just a handy bundle of dial values for common product types. `reality-skill` uses fixed workflow gates instead of dials.
 
 | Preset | What it expects |
 |---|---|
 | `saas` | Product proof over marketing fluff, no fake dashboards |
 | `dashboard` | Dense tables, clear filters, labeled charts, keyboard paths |
-| `ecommerce` | Price/shipping clarity, real comparison, no fake scarcity |
+| `ecommerce` | Price/shipping clarity, honest comparison, no fake scarcity |
 | `portfolio` | Work evidence over trait cards, real case studies |
-| `brutalist` | Deliberate rawness, not sloppy by accident |
+| `brutalist` | Deliberate rawness, not carelessness |
 | `minimal` | Fewer elements, sharper choices, high contrast |
 | `editorial` | Typography, imagery, voice, pacing |
 | `ai-tool` | Task controls, sources, constraints, error recovery |
@@ -215,27 +217,27 @@ Prompt:
 
 <details>
 <summary>Does this replace a human designer?</summary>
-No. It flags generic output and enforces product-specific decisions, but it doesn't replace taste, strategy, or visual craft.
+Not at all. It helps spot generic patterns and keeps decisions product-focused, but it doesn't replace taste, strategy, or visual craft. Think of it as a thoughtful reviewer, not a replacement for your designer.
 </details>
 
 <details>
-<summary>Do I need every skill?</summary>
-No. `no-slop` works standalone for scanning generic patterns. `perfect-design` adds the Design Contract and premium rubric when you need direction. `reality-skill` is for apps and workflows that must work beyond a static mockup.
+<summary>Do I need to use every skill?</summary>
+Nope. `no-slop` works great on its own for reviewing generic patterns. `perfect-design` adds direction and a deeper rubric when you want it. `reality-skill` is for apps and workflows that need to go beyond a static mockup. Pick what fits your needs.
 </details>
 
 <details>
 <summary>Does it work with any framework?</summary>
-Scans `.tsx`, `.jsx`, `.vue`, `.svelte`, `.astro`, `.css`, `.scss`, `.html`, and `.mdx`. The concepts apply to any stack -- you can run the CLI on any directory.
+Reviews `.tsx`, `.jsx`, `.vue`, `.svelte`, `.astro`, `.css`, `.scss`, `.html`, and `.mdx`. The ideas apply to any stack — you can point the CLI at any directory.
 </details>
 
 <details>
 <summary>What's economy mode?</summary>
-`-e` skips live subagent judges and uses deterministic local checks only. Same standards, lower cost. Useful for quick scans or when subagents aren't available.
+`-e` skips the live subagent judges and runs deterministic local checks only. Same standards, lighter on resources. Great for quick scans or when subagents aren't available.
 </details>
 
 <details>
-<summary>Can I contribute or report issues?</summary>
-Yes. This is an early public version. Open an issue, send a PR, or share before/after examples.
+<summary>Can I contribute or share feedback?</summary>
+Absolutely. This is an early public release. Open an issue, send a PR, or share a before/after example — all welcome.
 </details>
 
 ---

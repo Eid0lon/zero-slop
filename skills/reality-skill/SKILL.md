@@ -1,174 +1,144 @@
 ---
 name: reality-skill
-description: Turns AI-generated demo UIs into real usable product workflows. Use when building, reviewing, or finishing apps, dashboards, forms, CRUD flows, onboarding, checkout, settings, auth-like flows, or any interface that must work beyond a static mockup.
+description: Converts demo UIs into believable, end-to-end product workflows. Use when building, reviewing, or finishing apps, dashboards, CRUD flows, forms, onboarding, checkout, settings, auth-like surfaces, data tools, AI tools, integrations, or any UI that must behave like a real app instead of a static template. Composes after no-slop/perfect-design to make the interface operational, truthful, stateful, validated, persistent, and verifiable.
 ---
 
 # Reality Skill
 
-Reality Skill removes demoware.
+Reality Skill turns attractive screens into usable product workflows. It does not ask "does this look like an app?" It asks "can the intended user complete the job, recover from problems, and trust what the UI claims?"
 
-A screen is not a product. A workflow is real only when a user can complete the primary job end-to-end with working actions, truthful data, state coverage, validation, persistence or an honest mock boundary, recovery paths, and no fake capability presented as real.
+Use this skill aggressively whenever a request says app, tool, dashboard, portal, editor, workflow, CRUD, form, checkout, onboarding, settings, upload, export, invite, generate, sync, connect, save, publish, deploy, analyze, or review.
 
-## Core Rule
+## Command Interface
 
-Do not make the UI bigger. Make the user job finishable.
+Use `references/command-interface.md`.
 
-Prefer the smallest implementation that turns the current surface from a static or deceptive demo into an honest, usable workflow.
+Primary commands:
 
-## Workflow
+```bash
+reality --audit [target]
+reality --fix [target]
+reality --build [brief-or-target]
+reality --harden [target]
+reality --judge [target]
+reality --verify [target]
+reality -e --audit [target]
+```
 
-1. Identify the primary user job.
-2. Trace the workflow from entry to completion.
-3. List every fake, missing, decorative, dead, or dishonest element.
-4. Fix the smallest set of files needed to make the workflow real.
-5. Verify the workflow with tests, build checks, browser checks, or a clear manual path when tools are limited.
+Short flags:
 
-## The Seven Reality Gates
+- `-a`, `--audit`: find dead actions, fake data, missing states, weak workflows.
+- `-f`, `--fix`: make the smallest workflow-real implementation.
+- `-b`, `--build`: build the real workflow model while creating a new app surface.
+- `--harden`: add durability, recovery, validation, accessibility, and edge-state coverage.
+- `-j`, `--judge`: score the app against the reality gates.
+- `--verify`: prove the primary workflow by tests, build checks, and browser checks when possible.
+- `-e`, `--economy`: skip live judge agents and use deterministic checks plus local review.
 
-### 1. Action Gate
+Default mode:
 
-Every primary action must work, open a real path, or be visibly disabled with a reason.
+- Existing UI target: `--fix`.
+- New app brief: `--build`.
+- Review-only request: `--audit`.
 
-Block:
+## First Action
 
-- `href="#"`
-- `console.log`-only submit handlers
-- buttons with no handler
-- fake "Save", "Deploy", "Pay", "Connect", "Generate", or "Invite" actions
-- destructive actions without confirmation or undo where appropriate
+Load `steps/step-00-command-router.md`.
 
-### 2. Data Gate
+Step 00 parses the command, discovers project shape, loads only the needed references, and routes to audit, fix, build, harden, judge, or verify.
 
-Data must be truthful.
+## Core References
 
-Real data is best. Local mock data is acceptable only when the boundary is honest and does not pretend to be production truth.
+Load only what the task needs:
 
-Block:
-
-- fake metrics presented as real
-- fake testimonials, logos, users, revenue, uptime, or AI results
-- decorative charts with no labels, units, source, or decision path
-- duplicated placeholder rows that imply real usage
-
-### 3. State Gate
-
-The relevant states must exist.
-
-Check for:
-
-- loading
-- empty
-- error
-- disabled
-- success
-- partial data
-- long content
-- small screen
-
-Do not add every state everywhere. Add the states needed for the workflow the user is actually trying to complete.
-
-### 4. Persistence Gate
-
-User-created or edited data must survive the immediate workflow.
-
-Acceptable persistence, depending on the project:
-
-- server/database/API
-- existing app state store
-- local storage
-- URL state
-- durable in-memory state for one-page prototypes, if clearly scoped
-
-If persistence is intentionally mocked, make the boundary explicit in code and avoid UI language that implies production storage.
-
-### 5. Navigation Gate
-
-Users must not hit dead ends.
-
-Check for:
-
-- back paths
-- cancel paths
-- retry paths
-- edit paths
-- delete/recover paths
-- return-to-list/detail paths
-- active navigation state
-
-### 6. Validation Gate
-
-Forms and inputs must reject bad input with clear inline feedback.
-
-Check for:
-
-- required fields
-- malformed email/URL/number/date values
-- min/max length or quantity
-- disabled submit while invalid or submitting
-- useful error text near the field
-- preservation of user input after an error
-
-### 7. Truth Gate
-
-The UI must not pretend a fake capability is real.
-
-Block fake:
-
-- authentication
-- payments
-- AI generation
-- integrations
-- analytics
-- security claims
-- compliance claims
-- notifications
-- exports
-- team invites
-
-If the real backend or service is unavailable, create an honest local/mock boundary and name it plainly. Do not invent production behavior.
-
-## Common Fix Patterns
-
-- Replace a dead button with a working local state transition.
-- Replace decorative mock rows with add/edit/delete flows.
-- Add localStorage when a prototype needs refresh-safe data.
-- Add inline validation before submit.
-- Add empty/error/loading states around existing data calls.
-- Replace fake dashboard claims with clearly labeled sample data.
-- Add cancel, back, retry, and success paths.
-- Disable unavailable integrations instead of pretending they work.
-- Preserve the existing visual design unless it blocks the workflow.
+- `references/command-interface.md`: grammar, mode precedence, output contracts.
+- `references/reality-gates.md`: the twelve gates that define "not demoware."
+- `references/app-archetypes.md`: workflow expectations for dashboards, CRUD, editors, checkout, AI tools, integrations, onboarding, settings, and auth-like surfaces.
+- `references/implementation-playbook.md`: concrete patterns for data models, actions, state machines, validation, persistence, optimistic updates, undo, and honest mocks.
+- `references/truth-boundaries.md`: how to represent sample data, unavailable services, auth, payments, exports, AI, analytics, and integrations without lying.
+- `references/verification-playbook.md`: build, test, browser, persistence, accessibility, responsive, and smoke-test proof.
+- `references/judge-system.md`: reality judge protocol and scoring gates.
 
 ## Non-Negotiables
 
-- Do not stop at static UI when the task asks for an app, tool, dashboard, form, or workflow.
-- Do not leave TODOs, placeholder handlers, dead links, fake submit buttons, or fake success states.
-- Do not invent production services, credentials, customers, payments, metrics, or claims.
-- Do not rewrite the product broadly when a smaller reality fix will complete the job.
-- Do not remove useful design polish unless it hides fake functionality or blocks usability.
-- Preserve accessibility, semantics, keyboard paths, and responsive behavior.
+- Do not stop at a static UI when the user asked for an app, dashboard, tool, form, editor, portal, or workflow.
+- Do not ship dead buttons, `href="#"`, placeholder handlers, console-only submits, fake success toasts, decorative charts, fake metrics, fake users, fake payments, fake auth, fake AI, fake integrations, or fake exports.
+- Do not claim production capability unless the code actually connects to the production capability with real credentials/configuration already present in the project.
+- Prefer real project services, schemas, stores, routes, and design-system primitives over invented abstractions.
+- When real backend/service access is absent, create an honest local boundary: local storage, in-memory state, fixture mode, disabled integration, explicit sample data, or documented adapter seam in code and UI.
+- A primary workflow must include entry, intent, input, validation, submit/action, progress, success, failure, retry/recovery, persistence, and return/edit/delete paths where relevant.
+- User-created or edited data must survive the immediate workflow. Use server/database/API first, existing store second, local storage/URL state third, and clearly scoped memory only for throwaway prototypes.
+- Every primary action must either work, navigate to a real next step, or be disabled with a specific reason.
+- Forms must preserve user input after errors and show actionable inline messages near the relevant fields.
+- Data shown as real must be real or user-created. Sample data must be labeled as sample and must not pretend to be customers, revenue, uptime, compliance, security, or live analytics.
+- Verification is part of the implementation, not an afterthought. For frontend work, run the app when feasible and inspect the workflow in a browser.
+- Compose with `no-slop` and `perfect-design` when available: those skills improve design quality; Reality Skill makes the result operational and truthful.
 
-## Output Contract
+## Required State
 
-When using this skill, report:
+Maintain this state throughout the workflow:
 
 ```text
-Primary job:
-Reality gate:
-Blockers found:
-Files changed:
-Verification:
-Remaining fake boundaries:
+command:
+target:
+mode:
+economy_mode:
+project_type:
+primary_user:
+primary_job:
+workflow_contract:
+data_contract:
+truth_boundaries:
+reality_score_before:
+blocking_gates:
+files_changed:
+implementation_strategy:
+verification:
+reality_score_after:
+remaining_fake_boundaries:
+ship_decision:
 ```
 
-Use `Remaining fake boundaries: None` only when every relevant fake boundary has been removed, implemented, disabled, or honestly labeled.
+## Reality Contract
+
+Before editing, write or infer a compact contract:
+
+```text
+User:
+Job:
+Starting point:
+Completion condition:
+Data needed:
+Actions needed:
+Persistence needed:
+Unavailable real services:
+Honest mock/local boundary:
+States that must exist:
+Verification path:
+```
+
+If the contract is unclear, inspect the app and infer the most likely primary job. Ask the user only when multiple high-impact jobs conflict and a wrong choice would waste the implementation.
+
+## Local CLI Helper
+
+For deterministic prechecks:
+
+```bash
+python skills/reality-skill/scripts/reality_cli.py --audit <target>
+python skills/reality-skill/scripts/reality_cli.py --json --audit <target>
+python skills/reality-skill/scripts/reality_cli.py --strict --audit <target>
+```
+
+The CLI catches common demoware signals. It is not a replacement for reading code, implementing the workflow, browser verification, or the reality judge.
 
 ## Done Means
 
-- The primary user job can be completed end-to-end.
+- The primary job can be completed end-to-end.
 - Primary actions are real or honestly unavailable.
-- Data is real, user-created, or clearly marked as sample/mock.
-- Relevant states and validation exist.
-- Persistence is implemented or the mock boundary is explicit.
-- The user has recovery/navigation paths.
-- Verification was run or the exact limitation is stated.
+- User input is validated and preserved.
+- Relevant loading, empty, error, success, disabled, long-content, and small-screen states exist.
+- User-created data persists through the expected scope.
+- Navigation includes cancel, back, retry, return, edit, delete/recover paths where relevant.
+- Fake capabilities are implemented, disabled, or clearly labeled as local/sample/mock boundaries.
+- Verification ran, or the exact blocker is stated with the unverified risk.
+

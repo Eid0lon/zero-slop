@@ -196,7 +196,7 @@ PATTERNS: Sequence[Pattern] = (
     Pattern("Layout Formulae", "High", 8, re.compile(r"Features|Testimonials|Pricing|Get Started|Start Free|Book a demo", re.I), "generic landing-page section or CTA"),
     Pattern("Layout Formulae", "Medium", 4, re.compile(r"grid-cols-3|grid-cols-4|md:grid-cols-3|lg:grid-cols-3|py-24|py-32|text-center", re.I), "formulaic grid/spacing/alignment"),
     Pattern("Component Soup", "Medium", 4, re.compile(r"rounded-2xl|rounded-3xl|hover:scale|hover:-translate-y|hover:shadow", re.I), "over-rounded or hover-lift component cliche"),
-    Pattern("Component Soup", "Low", 2, re.compile(r"Sparkles|Zap|Shield|Rocket|Star|Award|CheckCircle|TrendingUp"), "generic decorative icon choice"),
+    Pattern("Component Soup", "Low", 2, re.compile(r"\b(?:Sparkles|Zap|Shield|Rocket|Star|Award|CheckCircle|TrendingUp)\b"), "generic decorative icon choice"),
     Pattern("Typography Sameness", "Medium", 4, re.compile(r"\b(?:Inter|Geist|Roboto|Plus Jakarta|Space Grotesk)\b|tracking-tight|tracking-\[-", re.I), "default generated typography signal"),
     Pattern("Typography Sameness", "Low", 2, re.compile(r"uppercase.*tracking-wider|text-xs.*uppercase|text-gray-400|text-slate-400", re.I), "weak label/body hierarchy"),
     Pattern("Motion Spam", "Medium", 4, re.compile(r"fadeIn|fade-in|opacity-0|whileInView|animate-.*fade|animate-.*bounce|animate-.*pulse|transition-all", re.I), "decorative or global motion"),
@@ -205,7 +205,7 @@ PATTERNS: Sequence[Pattern] = (
     Pattern("Accessibility Slop", "Critical", 15, re.compile(r"outline-none|focus:outline-none|focus:ring-0", re.I), "focus visibility risk"),
     Pattern("Responsive and Performance Slop", "Medium", 4, re.compile(r"min-h-screen|h-screen|w-screen|overflow-hidden|blur-|backdrop-blur|\bfilter\b|drop-shadow", re.I), "viewport trap or heavy visual effect risk"),
     Pattern("Code and Design-System Smells", "Medium", 4, re.compile(r"className=\"[^\"]*(\s+[^\s\"]+){15,}"), "long utility-class soup"),
-    Pattern("Design Token Violation", "High", 8, re.compile(r"bg-\[#|text-\[#|border-\[#|shadow-\[|rounded-\[|#[0-9a-fA-F]{3,8}"), "raw visual values bypass tokens"),
+    Pattern("Design Token Violation", "High", 8, re.compile(r"bg-\[#|text-\[#|border-\[#|shadow-\[|rounded-\[|#[0-9a-fA-F]{3,8}\b"), "raw visual values bypass tokens"),
     Pattern("Hierarchy Collapse", "High", 8, re.compile(r"text-lg font-semibold|font-semibold text-lg|grid-cols-3.*gap|grid.*gap-8", re.I), "repeated equal-weight hierarchy"),
     Pattern("Brand Incoherence", "Medium", 4, re.compile(r"modern|sleek|premium|beautiful|make it pop", re.I), "brand direction replaced by vague style words"),
 )
@@ -274,7 +274,7 @@ def has_focus_replacement(text: str) -> bool:
 def has_design_token_evidence(text: str) -> bool:
     return bool(
         re.search(
-            r"var\(--|theme\(|token|semantic|--(?:surface|background|foreground|accent|primary|secondary|muted|border|ring|radius|shadow|space|text|card|panel)",
+            r"var\(--|theme\(|token|semantic|@theme|--(?:color-|surface|background|foreground|accent|primary|secondary|muted|border|ring|radius|shadow|space|text|card|panel)",
             text,
             re.I,
         )
@@ -284,7 +284,7 @@ def has_design_token_evidence(text: str) -> bool:
 def has_product_specific_evidence(text: str) -> bool:
     return bool(
         re.search(
-            r"\b(invoice|expense|transaction|ledger|patient|order|ticket|project|repository|deployment|customer|account|calendar|schedule|message|settings|workflow|chart|table|row|record|dataset|queue|incident|policy|claim|shipment|booking)\b",
+            r"\b(invoice|expense|transaction|ledger|patient|order|ticket|task|meeting|standup|report|transcript|routing|automation|integration|slack|github|jira|linear|notion|project|repository|deployment|customer|account|calendar|schedule|message|settings|workflow|chart|table|row|record|dataset|queue|incident|policy|claim|shipment|booking)\b",
             text,
             re.I,
         )
@@ -307,8 +307,70 @@ def is_placeholder_attribute(text: str) -> bool:
     return bool(re.search(r"\bplaceholder\s*=", text, re.I))
 
 
+def class_attribute_contains_token(text: str, token: str) -> bool:
+    for match in re.finditer(r"\bclass(?:Name)?\s*=\s*([\"'])(.*?)\1", text, re.I):
+        classes = match.group(2)
+        if re.search(rf"(^|\s){re.escape(token)}($|\s)", classes, re.I):
+            return True
+    return False
+
+
 def is_css_filter_context(text: str) -> bool:
-    return bool(re.search(r"filter\s*:|filter\(|backdrop-filter|class(?:Name)?=[^>\n]*\bfilter\b", text, re.I))
+    return bool(
+        re.search(
+            r"(?<![\w.-])filter\s*:\s*(?:none|var\(|blur\(|brightness\(|contrast\(|grayscale\(|hue-rotate\(|invert\(|opacity\(|saturate\(|sepia\(|drop-shadow\()|backdrop-filter",
+            text,
+            re.I,
+        )
+        or class_attribute_contains_token(text, "filter")
+    )
+
+
+def is_code_structure_reference(line: str) -> bool:
+    return bool(
+        re.search(
+            r"^\s*(import\b|\{?\s*/\*|//|(?:export\s+default\s+|export\s+)?function\s+[A-Z]|const\s+\w*(?:features|testimonials|pricing)\w*\s*=|(?:features|testimonials|pricing)\s*:|[A-Z][A-Za-z0-9_]*\s*:\s*\(|<\s*/?\s*(?:Features|Testimonials|Pricing|PricingCard)\b|.*[a-zA-Z0-9_]*(?:features|testimonials|pricing)[a-zA-Z0-9_]*\.map\b)",
+            line,
+            re.I,
+        )
+    )
+
+
+def is_anchor_or_identifier_reference(line: str) -> bool:
+    return bool(
+        re.search(
+            r"^\s*(?:\{?\s*)?(?:id|href|key)\s*=\s*['\"]#?(?:features|testimonials|pricing)['\"]\s*[},]?\s*$|^\s*href:\s*['\"]#(?:features|testimonials|pricing)['\"],?\s*$",
+            line,
+            re.I,
+        )
+    )
+
+
+def has_landing_anchor_or_id(line: str) -> bool:
+    return bool(re.search(r"\b(?:id|href)\s*=\s*['\"]#?(?:features|testimonials|pricing)['\"]", line, re.I))
+
+
+def visible_text_contains_match(line: str, match: str) -> bool:
+    needle = match.strip()
+    if not needle:
+        return False
+    visible_chunks = re.findall(r">\s*([^<>{}][^<]*)\s*<", line)
+    return any(re.search(rf"\b{re.escape(needle)}\b", chunk, re.I) for chunk in visible_chunks)
+
+
+def visible_landing_label(line: str) -> bool:
+    return any(
+        visible_text_contains_match(line, label)
+        for label in ("Features", "Testimonials", "Pricing", "Get Started", "Start Free", "Book a demo")
+    )
+
+
+def is_navigation_label(line: str) -> bool:
+    return bool(re.search(r"\blabel:\s*['\"](?:Features|Testimonials|Pricing)['\"]|^\s*(?:Features|Testimonials|Pricing|See pricing)\s*$", line, re.I))
+
+
+def is_generic_cta_label(line: str) -> bool:
+    return bool(re.search(r"^\s*(?:Get Started|Start Free|Book a demo|Start 14-day trial|Talk to sales)\s*$|cta:\s*['\"](?:Get Started|Start Free|Book a demo|Start 14-day trial|Talk to sales)['\"]", line, re.I))
 
 
 def has_visual_cliche_cluster(text: str) -> bool:
@@ -428,6 +490,11 @@ def calibrate_finding(
             points = 1
             confidence = "low"
             context = "weak viewport-risk evidence"
+        elif match == "overflow-hidden" and not re.search(r"(?<!min-)h-screen|\bw-screen\b|fixed\b|body\b", combined, re.I):
+            counters.append("overflow-hidden is local clipping, not a viewport trap")
+            points = 1
+            confidence = "low"
+            context = "weak overflow evidence"
         elif "backdrop-blur" in match and category_repeat <= 2 and not has_visual_cliche_cluster(combined):
             counters.append("single backdrop blur signal")
             points = 2
@@ -450,8 +517,35 @@ def calibrate_finding(
             context = "unsupported proof/filler evidence"
 
     elif finding.category == "Layout Formulae":
-        if re.search(r"text-center|py-24|py-32|grid-cols-[34]|md:grid-cols-3|lg:grid-cols-3", match, re.I) and has_product_specific_evidence(combined) and not has_visual_cliche_cluster(combined):
-            counters.append("layout utility appears inside product-specific UI")
+        visible_label = visible_text_contains_match(line, finding.match)
+        visible_generic_label = visible_label or visible_landing_label(line)
+        if is_code_structure_reference(line) or is_anchor_or_identifier_reference(line) or (has_landing_anchor_or_id(line) and not visible_generic_label):
+            counters.append("match is code structure, import, component name, id, or href; not visible layout proof")
+            points = 0
+            confidence = "low"
+            context = "non-visible code reference"
+        elif visible_generic_label and is_interactive_context(line):
+            counters.append("visible generic label appears as navigation or action copy")
+            points = 1 if not has_visual_cliche_cluster(combined) else min(points, 4)
+            confidence = "low" if points <= 1 else "medium"
+            context = "weak visible nav/action label evidence"
+        elif visible_generic_label:
+            counters.append("visible generic landing label is isolated from stronger template proof")
+            points = 2 if not has_visual_cliche_cluster(combined) else min(points, 4)
+            confidence = "low" if points <= 2 else "medium"
+            context = "weak visible section-label evidence"
+        elif is_navigation_label(line):
+            counters.append("generic label appears as navigation copy only")
+            points = 1
+            confidence = "low"
+            context = "weak nav-label evidence"
+        elif is_generic_cta_label(line):
+            counters.append("generic CTA label is weak evidence without surrounding template proof")
+            points = 2
+            confidence = "low"
+            context = "weak CTA-label evidence"
+        elif re.search(r"text-center|py-24|py-32|grid-cols-[34]|md:grid-cols-3|lg:grid-cols-3", match, re.I) and not has_visual_cliche_cluster(combined):
+            counters.append("common layout utility alone is weak formula evidence")
             points = 1
             confidence = "low"
             context = "weak layout-formula evidence"
@@ -474,7 +568,12 @@ def calibrate_finding(
             context = "isolated aesthetic evidence"
 
     elif finding.category == "Design Token Violation":
-        if has_design_token_evidence(combined):
+        if re.search(r"^\s*--[\w-]+\s*:", line):
+            counters.append("raw value defines a design token instead of bypassing one")
+            points = 0
+            confidence = "low"
+            context = "token definition"
+        elif has_design_token_evidence(combined):
             counters.append("arbitrary value references a semantic CSS variable or theme token")
             points = 0
             confidence = "low"
@@ -484,6 +583,18 @@ def calibrate_finding(
             points = 4
             confidence = "medium"
             context = "raw token bypass"
+
+    elif finding.category == "Hierarchy Collapse":
+        if re.search(r"grid.*gap|grid-cols-3.*gap", line, re.I) and not has_visual_cliche_cluster(combined):
+            counters.append("responsive grid alone is weak hierarchy-collapse evidence")
+            points = 1
+            confidence = "low"
+            context = "weak grid hierarchy evidence"
+        elif re.search(r"text-lg font-semibold|font-semibold text-lg", line, re.I) and not has_visual_cliche_cluster(combined):
+            counters.append("single card-heading weight is not enough to prove hierarchy collapse")
+            points = 1
+            confidence = "low"
+            context = "weak type hierarchy evidence"
 
     elif finding.category == "Code and Design-System Smells":
         if has_design_token_evidence(combined) or has_product_specific_evidence(combined):
@@ -526,20 +637,21 @@ def calibrate_findings(findings: Sequence[Finding], lines: Sequence[str]) -> Lis
 
 
 def aggregate_scan(findings: Sequence[Finding]) -> Dict[str, object]:
-    category_scores_raw: Dict[str, int] = {}
+    category_scores_raw: Dict[str, Dict[str, int]] = {}
     category_counts: Dict[str, int] = {}
     severity_counts: Dict[str, int] = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0}
 
     for finding in findings:
         points = finding_points(finding)
-        category_scores_raw[finding.category] = category_scores_raw.get(finding.category, 0) + points
+        bucket = category_scores_raw.setdefault(finding.category, {"high": 0, "medium": 0, "low": 0})
+        bucket[finding.confidence if finding.confidence in bucket else "medium"] += points
         category_counts[finding.category] = category_counts.get(finding.category, 0) + 1
         severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
 
     category_scores = {
-        category: min(score, CATEGORY_SCORE_CAPS.get(category, 24))
-        for category, score in category_scores_raw.items()
-        if score > 0
+        category: min(parts["high"] + parts["medium"] + min(parts["low"], 6), CATEGORY_SCORE_CAPS.get(category, 24))
+        for category, parts in category_scores_raw.items()
+        if parts["high"] + parts["medium"] + parts["low"] > 0
     }
     signature_findings = [
         finding
@@ -768,7 +880,9 @@ def gate_thresholds(dials: Dict[str, int]) -> Dict[str, float]:
 def judge(scan: Dict[str, object], dials: Dict[str, int], economy: bool) -> Dict[str, object]:
     score = float(scan["score"])
     counts = scan["category_counts"]
+    category_scores = scan["category_scores"]
     assert isinstance(counts, dict)
+    assert isinstance(category_scores, dict)
     thresholds = gate_thresholds(dials)
     strict_penalty = (dials["STRICTNESS"] - 5) * 0.15
     tolerance_credit = dials["SLOP_TOLERANCE"] * 0.08
@@ -784,7 +898,7 @@ def judge(scan: Dict[str, object], dials: Dict[str, int], economy: bool) -> Dict
 
     judges = []
     for role in JUDGE_ROLES:
-        category_hit_count = sum(int(counts.get(category, 0)) for category in role_penalties[role])
+        category_hit_count = sum(float(category_scores.get(category, 0)) / 4.0 for category in role_penalties[role])
         raw = 10.0 - (score / 18.0) - strict_penalty - (category_hit_count * 0.18) + tolerance_credit
         role_score = round(clamp(raw, 0.0, 10.0), 1)
         verdict = "PASS" if role_score >= thresholds["minimum_lowest_judge"] else "FAIL"
@@ -793,7 +907,7 @@ def judge(scan: Dict[str, object], dials: Dict[str, int], economy: bool) -> Dict
                 "name": role,
                 "score": role_score,
                 "verdict": verdict,
-                "blocker": blocker_for_role(role, counts),
+                "blocker": blocker_for_role(role, category_scores, scan),
             }
         )
 
@@ -826,18 +940,41 @@ def judge(scan: Dict[str, object], dials: Dict[str, int], economy: bool) -> Dict
     }
 
 
-def blocker_for_role(role: str, counts: Dict[str, int]) -> str:
-    if role == "Visual Forensics Judge" and counts.get("Aesthetic Defaults", 0):
+def strong_finding_count(scan: Dict[str, object], category: str) -> int:
+    findings = scan.get("findings")
+    if findings is None:
+        findings = scan.get("top_findings", [])
+    assert isinstance(findings, list)
+
+    count = 0
+    for finding in findings:
+        if isinstance(finding, Finding):
+            finding_category = finding.category
+            confidence = finding.confidence
+            points = finding_points(finding)
+        elif isinstance(finding, dict):
+            finding_category = str(finding.get("category", ""))
+            confidence = str(finding.get("confidence", "medium"))
+            points = int(finding.get("points", 0))
+        else:
+            continue
+        if finding_category == category and confidence != "low" and points >= 3:
+            count += 1
+    return count
+
+
+def blocker_for_role(role: str, scores: Dict[str, int], scan: Dict[str, object]) -> str:
+    if role == "Visual Forensics Judge" and scores.get("Aesthetic Defaults", 0) >= 8:
         return "template aesthetic signals remain"
-    if role == "Product UX Judge" and counts.get("Layout Formulae", 0):
+    if role == "Product UX Judge" and scores.get("Layout Formulae", 0) >= 12:
         return "formulaic layout obscures product-specific job"
-    if role == "Design-System Judge" and counts.get("Design Token Violation", 0):
+    if role == "Design-System Judge" and scores.get("Design Token Violation", 0) >= 12:
         return "raw styling bypasses semantic tokens"
-    if role == "Accessibility and Responsive Judge" and counts.get("Accessibility Slop", 0):
+    if role == "Accessibility and Responsive Judge" and strong_finding_count(scan, "Accessibility Slop"):
         return "focus/accessibility risk detected"
-    if role == "Copy and Brand Judge" and counts.get("Copy Void", 0):
+    if role == "Copy and Brand Judge" and scores.get("Copy Void", 0) >= 8:
         return "copy is vague or unsupported"
-    if role == "Motion and Interaction Judge" and counts.get("Motion Spam", 0):
+    if role == "Motion and Interaction Judge" and scores.get("Motion Spam", 0) >= 8:
         return "motion signals lack purpose or reduced-motion proof"
     return "no primary blocker from deterministic scan"
 
@@ -846,16 +983,19 @@ def hard_blockers_for(scan: Dict[str, object]) -> List[str]:
     counts = scan["category_counts"]
     severities = scan["severity_counts"]
     signatures = scan["signatures"]
+    findings = scan["findings"]
     assert isinstance(counts, dict)
     assert isinstance(severities, dict)
+    assert isinstance(findings, list)
+
     blockers = []
     if severities.get("Critical", 0):
         blockers.append("critical issue detected")
-    if counts.get("Accessibility Slop", 0):
+    if strong_finding_count(scan, "Accessibility Slop"):
         blockers.append("accessibility risk detected")
-    if counts.get("Design Token Violation", 0) >= 3:
+    if strong_finding_count(scan, "Design Token Violation") >= 3:
         blockers.append("severe design token violation")
-    if counts.get("Hierarchy Collapse", 0) >= 2:
+    if strong_finding_count(scan, "Hierarchy Collapse") >= 2:
         blockers.append("hierarchy collapse risk")
     for signature in signatures:
         if signature["name"] in {"Ecommerce Urgency Fog", "Token Collapse", "Startup Gradient Stack"}:
@@ -935,8 +1075,13 @@ def build_result(args: argparse.Namespace) -> Dict[str, object]:
 
 
 def prompt_risk_score(text: str) -> int:
-    risky = re.findall(r"modern|sleek|premium|beautiful|clean|make it pop|hero|features|testimonials|pricing", text, flags=re.I)
-    return min(100, len(risky) * 8)
+    weak = re.findall(r"\b(?:modern|sleek|premium|beautiful|clean|hero|features|testimonials|pricing)\b", text, flags=re.I)
+    strong = re.findall(r"make it pop|blue-to-purple|indigo-to-pink|glassmorphism|glass cards|10k\+|99\.9%|ai saas", text, flags=re.I)
+    if not weak and not strong:
+        return 0
+    if len(weak) <= 1 and not strong and has_product_specific_evidence(text):
+        return 0
+    return min(64, max(0, len(weak) - 1) * 4 + len(strong) * 8)
 
 
 def next_action(mode: str, gate: Dict[str, object]) -> str:
@@ -1045,6 +1190,36 @@ def category_count(scan: Dict[str, object], category: str) -> int:
     return int(counts.get(category, 0))
 
 
+def category_score(scan: Dict[str, object], category: str) -> int:
+    scores = scan["category_scores"]
+    assert isinstance(scores, dict)
+    return int(scores.get(category, 0))
+
+
+def has_strong_finding(scan: Dict[str, object], category: str | None = None) -> bool:
+    if category is not None:
+        return strong_finding_count(scan, category) > 0
+
+    findings = scan.get("findings")
+    if findings is None:
+        findings = scan.get("top_findings", [])
+    assert isinstance(findings, list)
+    for finding in findings:
+        if isinstance(finding, Finding):
+            finding_category = finding.category
+            confidence = finding.confidence
+            points = finding_points(finding)
+        elif isinstance(finding, dict):
+            finding_category = str(finding.get("category", ""))
+            confidence = str(finding.get("confidence", "medium"))
+            points = int(finding.get("points", 0))
+        else:
+            continue
+        if (category is None or finding_category == category) and confidence != "low" and points >= 3:
+            return True
+    return False
+
+
 def top_categories(scan: Dict[str, object], limit: int = 6) -> List[Dict[str, object]]:
     counts = scan["category_counts"]
     scores = scan["category_scores"]
@@ -1079,6 +1254,8 @@ def autopsy_cause(scan: Dict[str, object], gate: Dict[str, object]) -> str:
         return "No autopsy-level cause detected. Any remaining signals are minor deterministic hints, not a structural AI-slop failure."
 
     names = signature_names(scan)
+    if score <= 30 and not names and not has_strong_finding(scan):
+        return "Only low-confidence residue remains. Treat this as a review queue, not a structural AI-slop failure."
     for name in (
         "Startup Gradient Stack",
         "Glass Feature Soup",
@@ -1118,16 +1295,16 @@ def any_product_test(scan: Dict[str, object]) -> Dict[str, str]:
     has_generic_stack = bool(
         names.intersection({"Startup Gradient Stack", "Copy Fog Landing", "Glass Feature Soup", "Brand Costume"})
     )
-    layout = category_count(scan, "Layout Formulae")
-    copy = category_count(scan, "Copy Void")
-    aesthetic = category_count(scan, "Aesthetic Defaults")
+    layout = category_score(scan, "Layout Formulae")
+    copy = category_score(scan, "Copy Void")
+    aesthetic = category_score(scan, "Aesthetic Defaults")
 
-    if has_generic_stack or (layout and copy and aesthetic):
+    if has_generic_stack or (layout >= 8 and copy >= 8 and aesthetic >= 8):
         return {
             "risk": "HIGH",
             "finding": "This UI could become a CRM, AI SaaS, analytics tool, or productivity app by changing mostly the logo and nouns.",
         }
-    if layout or copy:
+    if layout >= 8 or copy >= 8:
         return {
             "risk": "MEDIUM",
             "finding": "Some structure or language is reusable across too many products; product-specific proof should be strengthened.",
@@ -1142,16 +1319,16 @@ def autopsy_systems(scan: Dict[str, object]) -> List[Dict[str, str]]:
     names = set(signature_names(scan))
     rows: List[Dict[str, str]] = []
     for system in AUTOPSY_SYSTEMS:
-        count = sum(category_count(scan, category) for category in system["categories"])
+        score = sum(category_score(scan, category) for category in system["categories"])
         for signature in system.get("signatures", ()):
             if signature in names:
-                count += 2
-        if count >= int(system["fail_at"]):
+                score += 8
+        if score >= int(system["fail_at"]) * 4:
             status = "FAIL"
             note = str(system["fail_note"])
-        elif count >= int(system["warn_at"]):
+        elif score >= int(system["warn_at"]):
             status = "WARN"
-            note = f"{count} deterministic signal(s) detected."
+            note = f"{score} calibrated signal point(s) detected."
         else:
             status = "PASS"
             note = str(system["pass_note"])
@@ -1161,33 +1338,37 @@ def autopsy_systems(scan: Dict[str, object]) -> List[Dict[str, str]]:
 
 def autopsy_pretends_and_proves(scan: Dict[str, object]) -> Dict[str, str]:
     names = set(signature_names(scan))
-    counts = scan["category_counts"]
-    assert isinstance(counts, dict)
+    score = int(scan["score"])
 
     if "Dashboard Theater" in names:
         return {
             "pretends": "A data-backed product with operational credibility.",
             "proves": "The metrics and charts need sources, labels, or a decision path before they can carry trust.",
         }
-    if counts.get("Copy Void", 0) and counts.get("Layout Formulae", 0):
+    if category_score(scan, "Copy Void") >= 8 and category_score(scan, "Layout Formulae") >= 8:
         return {
             "pretends": "A polished product story with momentum and conversion intent.",
             "proves": "The story is still mostly abstract claims and familiar section choreography.",
         }
-    if counts.get("Aesthetic Defaults", 0) and counts.get("Component Soup", 0):
+    if category_score(scan, "Aesthetic Defaults") >= 8 and category_score(scan, "Component Soup") >= 8:
         return {
             "pretends": "Premium visual craft.",
             "proves": "The craft is coming from trend styling rather than product-specific decisions.",
         }
-    if counts.get("Accessibility Slop", 0):
+    if category_score(scan, "Accessibility Slop") >= 4 and has_strong_finding(scan, "Accessibility Slop"):
         return {
             "pretends": "A ready-to-ship interface.",
             "proves": "Keyboard or focus risk still blocks a real release.",
         }
-    if int(scan["score"]) <= 15:
+    if score <= 15:
         return {
             "pretends": "Nothing suspicious from deterministic patterns alone.",
             "proves": "A deeper review should focus on product truth, browser behavior, and real user workflows.",
+        }
+    if score <= 30 and not names and not has_strong_finding(scan):
+        return {
+            "pretends": "A mostly credible interface with a few familiar moves.",
+            "proves": "The scanner found low-confidence residue only; human review should focus on product truth and browser behavior.",
         }
     return {
         "pretends": "A complete interface.",
@@ -1200,11 +1381,11 @@ def autopsy_reality_handoff(scan: Dict[str, object]) -> Dict[str, object]:
     reasons: List[str] = []
     if "Dashboard Theater" in names:
         reasons.append("fake or unsupported metrics may be presented as product proof")
-    if category_count(scan, "Copy Void"):
+    if category_score(scan, "Copy Void") >= 8:
         reasons.append("copy/proof may overclaim what the UI actually demonstrates")
-    if category_count(scan, "Layout Formulae"):
+    if category_score(scan, "Layout Formulae") >= 8:
         reasons.append("primary CTAs and page sections may still be static demo choreography")
-    if category_count(scan, "Accessibility Slop"):
+    if category_score(scan, "Accessibility Slop") >= 4 and has_strong_finding(scan, "Accessibility Slop"):
         reasons.append("focus/accessibility risk affects real workflow completion")
 
     if reasons:
@@ -1251,7 +1432,10 @@ def build_autopsy(result: Dict[str, object]) -> Dict[str, object]:
     severity = autopsy_severity(score, str(gate["gate"]))
     pretends = autopsy_pretends_and_proves(scan)
     any_product = any_product_test(scan)
-    top_findings = scan["top_findings"]
+    top_findings = scan.get("top_findings")
+    if top_findings is None:
+        findings = scan.get("findings", [])
+        top_findings = summarize_findings(findings) if isinstance(findings, list) else []
     assert isinstance(top_findings, list)
     signatures = scan["signatures"]
     assert isinstance(signatures, list)

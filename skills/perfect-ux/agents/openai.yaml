@@ -1,0 +1,6 @@
+interface:
+  display_name: "Perfect UX"
+  short_description: "Beta research-backed UX engineer for frictionless product journeys"
+  default_prompt: "Use $perfect-ux --contract before UX work, then map, audit, fix/harden, judge, and verify the primary journey."
+policy:
+  allow_implicit_invocation: true

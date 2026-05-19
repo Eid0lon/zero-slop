@@ -3,16 +3,16 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/status-early%20public-important?style=flat-square" alt="Status">
-  <img src="https://img.shields.io/badge/skills-3-success?style=flat-square" alt="Skills">
+  <img src="https://img.shields.io/badge/skills-4-success?style=flat-square" alt="Skills">
 </p>
 
-Three agent skills to help your AI-generated interfaces feel like *your* product — not like every other AI output on the web.
+Four agent skills to help your AI-generated interfaces feel like *your* product, work for real users, and avoid looking like every other AI output on the web.
 
 > **Repo:** [github.com/Eid0lon/zero-slop](https://github.com/Eid0lon/zero-slop)
 
 - [What it does](#what-it-does)
 - [What this is not](#what-this-is-not)
-- [The three skills](#the-three-skills)
+- [The four skills](#the-four-skills)
 - [Install](#install)
 - [Commands](#commands)
 - [Scan vs Autopsy](#scan-vs-autopsy)
@@ -29,9 +29,9 @@ Three agent skills to help your AI-generated interfaces feel like *your* product
 
 AI coding agents tend to reach for the same visual habits — purple gradients, glass cards, "empower your workflow" headlines, three centered feature cards above the fold. These are pulled from training data, not shaped by *your* product.
 
-`no-slop` reviews your frontend code for these patterns and gives you a friendly report with a score and actionable suggestions. `perfect-design` helps you define the right direction before any code is written. `reality-skill` makes sure the result is a working product, not just a pretty screenshot.
+`no-slop` reviews your frontend code for these patterns and gives you a friendly report with a score and actionable suggestions. `perfect-design` helps you define the right visual and product direction before code is written. `perfect-ux` maps the real user job, friction, recovery paths, accessibility, trust, and evidence. `reality-skill` makes sure the result is a working product, not just a pretty screenshot.
 
-Together they form a gentle pipeline: `no-slop` spots the generic bits, `perfect-design` builds a product-specific replacement, and `reality-skill` completes the workflow so it actually works end-to-end.
+Together they form a gentle pipeline: `perfect-design` shapes the product-specific interface, `perfect-ux` makes the journey understandable and recoverable, `no-slop` spots generic residue, and `reality-skill` completes the workflow so it actually works end-to-end.
 
 ---
 
@@ -45,7 +45,7 @@ Together they form a gentle pipeline: `no-slop` spots the generic bits, `perfect
 
 ---
 
-## The three skills
+## The four skills
 
 ### `no-slop` — spot and improve generic UI
 
@@ -62,6 +62,14 @@ Together they form a gentle pipeline: `no-slop` spots the generic bits, `perfect
 - Has 6 product archetypes (operational SaaS, dashboard, commerce, portfolio, editorial, dev tool) to set the right expectations
 - Scores UI against a 14-dimension rubric
 - Works hand-in-hand with `no-slop` — runs it before and after every design pass
+
+### `perfect-ux` beta - make the journey feel obvious and recoverable
+
+- Writes a UX Contract (user, job, start point, completion condition, decision moments, feedback, recovery, trust, and evidence) before changing UX
+- Maps the primary journey from entry to completion, including failure, keyboard, mobile, and return paths
+- Scores UX against user need, task completion, IA, cognitive load, feedback, error recovery, accessibility, responsive resilience, performance feel, trust, content clarity, and expert efficiency
+- Includes research-backed gates drawn from usability heuristics, WCAG/WAI, GOV.UK, Baymard, Core Web Vitals, mature design systems, and Human-AI interaction guidance
+- Provides a deterministic `perfect_ux_cli.py` precheck plus a 6-role judge protocol for serious UX review
 
 ### `reality-skill` — turn demos into real workflows
 
@@ -107,6 +115,19 @@ Then activate the skills you need in your agent.
 | `--verify` | Build, lint, browser, and accessibility checks |
 | `-e` | Economy mode — deterministic checks only, no live judges needed |
 
+### `perfect-ux`
+
+| Command | What it does |
+|---|---|
+| `--contract` | Writes a UX Contract from a brief |
+| `--map` | Maps the primary journey, decisions, states, and recovery paths |
+| `--audit` | Finds UX friction, trust gaps, accessibility risks, and missing evidence |
+| `--fix` | Removes blocking friction with focused changes |
+| `--harden` | Adds resilience, edge states, recovery, keyboard paths, and proof |
+| `--judge` | Runs the strict UX review protocol |
+| `--verify` | Verifies the primary journey, keyboard path, mobile behavior, and state coverage |
+| `-e` | Economy mode — deterministic checks only, no live judges needed |
+
 ### `reality-skill`
 
 Reality Skill is a workflow skill rather than a CLI command. Invoke it whenever an app, dashboard, form, checkout, onboarding flow, settings page, or CRUD surface needs to go beyond a static mockup.
@@ -139,17 +160,19 @@ Scan gives you the calibrated score, category breakdowns, matching signatures, a
 ## How they work together
 
 ```
-1. perfect-design --contract     —  decide what your product is before writing code
-2. no-slop --autopsy             —  understand where the current UI stands
-3. perfect-design --create/polish —  build or refine the interface
-4. no-slop --scan --json         —  debug specific findings or add CI checks
-5. no-slop --judge               —  verify nothing generic slipped through
-6. perfect-design --judge        —  verify the result feels product-specific
-7. reality-skill                 —  verify the primary workflow actually works
-8. perfect-design --verify       —  build, lint, browser, a11y checks
+1. perfect-design --contract      —  decide what your product is before writing code
+2. perfect-ux --contract          —  decide who the user is, what job they complete, and how success is proven
+3. no-slop --autopsy              —  understand where the current UI stands
+4. perfect-design --create/polish —  build or refine the interface
+5. perfect-ux --audit/fix         —  remove journey friction, ambiguity, access blockers, and recovery gaps
+6. reality-skill                  —  make actions, data, persistence, and states real
+7. no-slop --scan --json          —  debug specific findings or add CI checks
+8. no-slop --judge                —  verify nothing generic slipped through
+9. perfect-design --judge         —  verify the result feels product-specific
+10. perfect-ux --judge/verify     —  verify the primary user journey actually works for real humans
 ```
 
-If `no-slop` isn't available, `perfect-design` notes it and applies a local checklist. It never claims a pass it can't back up.
+If `no-slop` isn't available, `perfect-design` notes it and applies a local checklist. If live UX judges or browser checks are unavailable, `perfect-ux` records the limitation and never claims a full pass it cannot back up.
 
 ---
 
@@ -166,8 +189,9 @@ Here are a few things the scanner keeps an eye out for:
 - Hover scale or lift applied indiscriminately to every card
 - Animations that don't respect `prefers-reduced-motion`
 - Hardcoded hex colors bypassing design tokens
+- Placeholder-only inputs, vague CTAs, dead-end actions, missing recovery paths, unsupported AI/trust claims, mobile traps, and inaccessible custom controls
 
-The full pattern catalog and scoring rules live in `skills/no-slop/references/ai-slop-patterns.md`.
+The full anti-slop pattern catalog lives in `skills/no-slop/references/ai-slop-patterns.md`. The UX gates live in `skills/perfect-ux/references/ux-gates.md`.
 
 ---
 
@@ -198,13 +222,15 @@ Prompt:
 
 ## Dials and presets
 
-`no-slop` and `perfect-design` use dials (0–10 sliders) to adjust how strict the checks are. A preset is just a handy bundle of dial values for common product types. `reality-skill` uses fixed workflow gates instead of dials.
+`no-slop`, `perfect-design`, and `perfect-ux` use dials (0–10 sliders) to adjust how strict the checks are. A preset is just a handy bundle of dial values for common product types. `reality-skill` uses fixed workflow gates instead of dials.
 
 | Preset | What it expects |
 |---|---|
 | `saas` | Product proof over marketing fluff, no fake dashboards |
 | `dashboard` | Dense tables, clear filters, labeled charts, keyboard paths |
 | `ecommerce` | Price/shipping clarity, honest comparison, no fake scarcity |
+| `onboarding` | Fast first success, saved progress, reversible setup choices |
+| `public-service` | Plain language, eligibility, privacy, accessibility, completion proof |
 | `portfolio` | Work evidence over trait cards, real case studies |
 | `brutalist` | Deliberate rawness, not carelessness |
 | `minimal` | Fewer elements, sharper choices, high contrast |
